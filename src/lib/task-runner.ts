@@ -1,5 +1,6 @@
 import { buildOcrTranslatePayload, createOcrTranslateTasks } from '@/lib/ghostcut'
 import { uploadToTos } from '@/lib/tos'
+import { getLanguageLabel } from '@/constants/language'
 import type { TaskStoreApi } from '@/store/task-store'
 
 type RunTaskBatchInput = {
@@ -26,6 +27,11 @@ function getTaskLanguages(store: TaskStoreApi, taskId: string) {
 
 function getErrorMessage(error: unknown) {
 	return error instanceof Error ? error.message : '任务执行失败，请稍后重试'
+}
+
+function stripFileExtension(fileName: string) {
+	// 只去掉最后一个扩展名段，例如 `a.b.mp4` -> `a.b`
+	return fileName.replace(/\.[^/.]+$/, '')
 }
 
 type UploadedTaskFile = {
@@ -98,9 +104,11 @@ export async function runTaskBatch({ store, taskId, files }: RunTaskBatchInput) 
 	}
 
 	try {
+		const targetLangLabel = getLanguageLabel(taskLanguages.targetLanguage)
 		const payload = buildOcrTranslatePayload({
 			sourceUrls: uploadedTaskFiles.map((file) => file.sourceUrl),
-			names: uploadedTaskFiles.map((file) => file.name),
+			// GhostCut 支持用 `names` 自定义作品名：`原名-语言名(中文)`，且不包含扩展名
+			names: uploadedTaskFiles.map((file) => `${stripFileExtension(file.name)}-${targetLangLabel}`),
 			sourceLang: taskLanguages.sourceLanguage,
 			targetLang: taskLanguages.targetLanguage,
 		})

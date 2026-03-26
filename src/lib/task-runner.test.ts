@@ -95,7 +95,7 @@ describe('task runner', () => {
 		expect(createOcrTranslateTasksMock).toHaveBeenCalledWith(
 			expect.objectContaining({
 				urls: ['https://tos.example.com/episode-1.mp4', 'https://tos.example.com/episode-2.mp4'],
-				names: ['episode-1.mp4', 'episode-2.mp4'],
+				names: ['episode-1-英文', 'episode-2-英文'],
 				videoInpaintLang: 'zh',
 				lang: 'en',
 			}),
