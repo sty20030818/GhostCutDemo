@@ -23,6 +23,11 @@ export function ResultPanel({ results }: ResultPanelProps) {
 				</div>
 			</CardHeader>
 			<CardContent className='flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto'>
+				{results.length === 0 ? (
+					<div className='rounded-xl border border-dashed border-border/80 bg-muted/20 p-6 text-sm text-muted-foreground'>
+						任务完成后，这里会自动出现可下载的结果条目。
+					</div>
+				) : null}
 				{results.map((result) => (
 					<ResultCard
 						key={result.id}

@@ -1,24 +1,99 @@
-import { BarChart3Icon, SparklesIcon } from 'lucide-react'
+import { useEffect, useMemo, useRef } from 'react'
+import { BarChart3Icon, DatabaseIcon, SparklesIcon } from 'lucide-react'
 
 import { ResultPanel } from '@/components/result/result-panel'
 import { TaskList } from '@/components/task/task-list'
 import { UploadPanel } from '@/components/upload/upload-panel'
 import { Badge } from '@/components/ui/badge'
-import {
-	mockResults,
-	mockTasks,
-	pendingFiles,
-	sourceLanguageOptions,
-	targetLanguageOptions,
-} from '@/pages/task-dashboard.mock'
+import { mockTasks, pendingFiles, sourceLanguageOptions, targetLanguageOptions } from '@/pages/task-dashboard.mock'
+import { useTaskStore } from '@/store/task-store'
+import type { TaskResult, TranslateTask } from '@/types/task'
 
-const overviewItems = [
-	{ label: '处理中任务', value: '03' },
-	{ label: '已完成结果', value: '02' },
-	{ label: '待上传文件', value: '03' },
-]
+function buildTaskResults(tasks: TranslateTask[]): TaskResult[] {
+	return tasks.flatMap((task) =>
+		task.files
+			.filter((file) => file.status === 'completed')
+			.map((file) => ({
+				id: `${task.id}-${file.id}`,
+				taskId: task.id,
+				taskName: task.name,
+				fileId: file.id,
+				fileName: file.name,
+				targetLanguage: task.targetLanguage,
+				finishedAt: task.createdAt,
+				format: 'MP4 / 内嵌字幕',
+				downloadUrl: file.resultUrl,
+			})),
+	)
+}
 
 export function TaskDashboardPage() {
+	const resultPanelRef = useRef<HTMLDivElement | null>(null)
+	const tasks = useTaskStore((state) => state.tasks)
+	const selectedTaskId = useTaskStore((state) => state.selectedTaskId)
+	const isPolling = useTaskStore((state) => state.isPolling)
+	const loadTasksFromDB = useTaskStore((state) => state.loadTasksFromDB)
+	const bootstrapDemoTasks = useTaskStore((state) => state.bootstrapDemoTasks)
+	const createLocalTask = useTaskStore((state) => state.createLocalTask)
+	const setSelectedTaskId = useTaskStore((state) => state.setSelectedTaskId)
+
+	useEffect(() => {
+		let active = true
+
+		void (async () => {
+			const storedTasks = await loadTasksFromDB()
+
+			if (active && storedTasks.length === 0) {
+				await bootstrapDemoTasks(mockTasks)
+			}
+		})()
+
+		return () => {
+			active = false
+		}
+	}, [bootstrapDemoTasks, loadTasksFromDB])
+
+	const results = useMemo(() => buildTaskResults(tasks), [tasks])
+	const overviewItems = useMemo(
+		() => [
+			{
+				label: '处理中任务',
+				value: String(tasks.filter((task) => task.status === 'queued' || task.status === 'processing').length).padStart(
+					2,
+					'0',
+				),
+			},
+			{
+				label: '已完成结果',
+				value: String(results.length).padStart(2, '0'),
+			},
+			{
+				label: '待上传文件',
+				value: String(tasks.flatMap((task) => task.files).filter((file) => file.status === 'pending').length).padStart(
+					2,
+					'0',
+				),
+			},
+		],
+		[results.length, tasks],
+	)
+
+	async function handleCreateTask() {
+		await createLocalTask({
+			taskName: '新的本地任务',
+			sourceLanguage: sourceLanguageOptions[1]?.label ?? '自动识别',
+			targetLanguage: targetLanguageOptions[2]?.label ?? 'English',
+			files: pendingFiles,
+		})
+	}
+
+	function handleShowResults() {
+		resultPanelRef.current?.scrollIntoView({
+			behavior: 'smooth',
+			block: 'start',
+		})
+	}
+
 	return (
 		<div className='min-h-svh bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.92),_transparent_38%),linear-gradient(180deg,_rgba(241,245,249,0.95),_rgba(248,250,252,1))] px-2 py-2 text-foreground sm:px-3 sm:py-3 xl:px-4 xl:py-4'>
 			<div className='flex w-full flex-col gap-3'>
@@ -27,18 +102,18 @@ export function TaskDashboardPage() {
 						<div className='flex flex-col gap-3'>
 							<Badge variant='outline'>
 								<SparklesIcon data-icon='inline-start' />
-								阶段二 · 页面骨架
+								阶段五 · 状态管理
 							</Badge>
 							<div className='flex flex-col gap-2'>
 								<h1 className='font-heading text-3xl font-medium tracking-tight sm:text-4xl'>GhostCut 任务工作台</h1>
 								<p className='max-w-3xl text-sm leading-6 text-muted-foreground sm:text-base'>
-									先把上传入口、任务列表和结果区稳定摆出来，后续阶段只需要把真实数据源逐步替换进来。
+									页面现在通过 Zustand 和 IndexedDB 驱动任务状态，后续阶段只需要继续接入上传、接口和轮询。
 								</p>
 							</div>
 						</div>
 						<div className='flex items-center gap-2 rounded-2xl border border-border/60 bg-muted/40 px-3 py-2 text-sm text-muted-foreground'>
-							<BarChart3Icon className='size-4' />
-							<span>当前页面全部由 mock 数据驱动</span>
+							{isPolling ? <BarChart3Icon className='size-4' /> : <DatabaseIcon className='size-4' />}
+							<span>{isPolling ? '轮询状态预留中' : '当前页面由 store + IndexedDB 驱动'}</span>
 						</div>
 					</div>
 					<div className='grid gap-3 sm:grid-cols-3'>
@@ -59,13 +134,21 @@ export function TaskDashboardPage() {
 							sourceLanguageOptions={sourceLanguageOptions}
 							targetLanguageOptions={targetLanguageOptions}
 							pendingFiles={pendingFiles}
+							onCreateTask={handleCreateTask}
+							onShowResults={handleShowResults}
 						/>
 					</div>
 					<div className='min-h-0 min-w-0'>
-						<TaskList tasks={mockTasks} />
+						<TaskList
+							tasks={tasks}
+							selectedTaskId={selectedTaskId}
+							onSelectTask={setSelectedTaskId}
+						/>
 					</div>
-					<div className='min-h-0 min-w-0'>
-						<ResultPanel results={mockResults} />
+					<div
+						ref={resultPanelRef}
+						className='min-h-0 min-w-0'>
+						<ResultPanel results={results} />
 					</div>
 				</div>
 			</div>

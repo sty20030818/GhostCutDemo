@@ -11,9 +11,17 @@ type UploadPanelProps = {
 	sourceLanguageOptions: LanguageOption[]
 	targetLanguageOptions: LanguageOption[]
 	pendingFiles: PendingUploadFile[]
+	onCreateTask?: () => void
+	onShowResults?: () => void
 }
 
-export function UploadPanel({ sourceLanguageOptions, targetLanguageOptions, pendingFiles }: UploadPanelProps) {
+export function UploadPanel({
+	sourceLanguageOptions,
+	targetLanguageOptions,
+	pendingFiles,
+	onCreateTask,
+	onShowResults,
+}: UploadPanelProps) {
 	return (
 		<Card className='h-full overflow-hidden border-border/80 bg-card/90 backdrop-blur'>
 			<CardHeader>
@@ -53,7 +61,10 @@ export function UploadPanel({ sourceLanguageOptions, targetLanguageOptions, pend
 				<SourceLanguageSelector items={sourceLanguageOptions} />
 				<TargetLanguageSelector items={targetLanguageOptions} />
 				<TaskOptionForm />
-				<CreateTaskButton />
+				<CreateTaskButton
+					onCreateTask={onCreateTask}
+					onShowResults={onShowResults}
+				/>
 			</CardContent>
 		</Card>
 	)

@@ -7,11 +7,15 @@ import type { TranslateTask } from '@/types/task'
 
 type TaskCardProps = {
 	task: TranslateTask
+	isSelected?: boolean
+	onSelect?: () => void
 }
 
-export function TaskCard({ task }: TaskCardProps) {
+export function TaskCard({ task, isSelected = false, onSelect }: TaskCardProps) {
 	return (
-		<Card className='border-border/80 bg-card/95'>
+		<Card
+			className={`border-border/80 bg-card/95 transition-all ${isSelected ? 'ring-2 ring-primary/30' : ''}`}
+			onClick={onSelect}>
 			<CardHeader className='flex flex-col gap-3'>
 				<div className='flex items-start justify-between gap-3'>
 					<div className='flex flex-col gap-1'>
