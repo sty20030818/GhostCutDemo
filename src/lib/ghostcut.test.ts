@@ -2,8 +2,8 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import {
 	buildOcrTranslatePayload,
-	createOcrTranslateTask,
-	getGhostCutTaskStatus,
+	createOcrTranslateTasks,
+	getGhostCutTaskStatuses,
 } from '@/lib/ghostcut'
 
 describe('ghostcut api', () => {
@@ -14,7 +14,8 @@ describe('ghostcut api', () => {
 
 	it('可以构建 4.1.1.4 文字翻译请求体', () => {
 		const payload = buildOcrTranslatePayload({
-			sourceUrl: 'https://example.com/source.mp4',
+			sourceUrls: ['https://example.com/source.mp4', 'https://example.com/source-2.mp4'],
+			names: ['source', 'source-2'],
 			sourceLang: 'zh',
 			targetLang: 'en',
 			videoInpaintMasks: [{ type: 'trans_only_ocr' }],
@@ -22,7 +23,8 @@ describe('ghostcut api', () => {
 		})
 
 		expect(payload).toEqual({
-			urls: ['https://example.com/source.mp4'],
+			urls: ['https://example.com/source.mp4', 'https://example.com/source-2.mp4'],
+			names: ['source', 'source-2'],
 			needChineseOcclude: 11,
 			videoInpaintLang: 'zh',
 			lang: 'en',
@@ -31,7 +33,7 @@ describe('ghostcut api', () => {
 		})
 	})
 
-	it('可以提交文字翻译任务并返回任务 id', async () => {
+	it('可以批量提交文字翻译任务并返回批次与作品 id', async () => {
 		vi.stubEnv('VITE_GHOSTCUT_BASE_URL', 'https://api.zhaoli.com')
 		vi.stubEnv('VITE_GHOSTCUT_APP_KEY', 'demo-key')
 		vi.stubEnv('VITE_GHOSTCUT_APP_SECRET', 'demo-secret')
@@ -39,18 +41,33 @@ describe('ghostcut api', () => {
 		const fetchMock = vi.fn().mockResolvedValue({
 			ok: true,
 			json: async () => ({
-				id: 'task-123',
+				code: 1000,
+				msg: 'success',
+				body: {
+					idProject: 230953994,
+					dataList: [
+						{
+							url: 'https://example.com/source.mp4',
+							id: 488026661,
+						},
+						{
+							url: 'https://example.com/source-2.mp4',
+							id: 488026662,
+						},
+					],
+				},
 			}),
 		})
 		vi.stubGlobal('fetch', fetchMock)
 
 		const payload = buildOcrTranslatePayload({
-			sourceUrl: 'https://example.com/source.mp4',
+			sourceUrls: ['https://example.com/source.mp4', 'https://example.com/source-2.mp4'],
+			names: ['source', 'source-2'],
 			sourceLang: 'zh',
 			targetLang: 'en',
 		})
 
-		const result = await createOcrTranslateTask(payload)
+		const result = await createOcrTranslateTasks(payload)
 
 		expect(fetchMock).toHaveBeenCalledWith(
 			'https://api.zhaoli.com/v-w-c/gateway/ve/work/free',
@@ -61,15 +78,25 @@ describe('ghostcut api', () => {
 					AppKey: 'demo-key',
 					AppSign: expect.any(String),
 				}),
-				body: '{"urls":["https://example.com/source.mp4"],"needChineseOcclude":11,"videoInpaintLang":"zh","lang":"en"}',
+				body: '{"urls":["https://example.com/source.mp4","https://example.com/source-2.mp4"],"names":["source","source-2"],"needChineseOcclude":11,"videoInpaintLang":"zh","lang":"en"}',
 			}),
 		)
 		expect(result).toEqual({
-			id: 'task-123',
+			idProject: '230953994',
+			items: [
+				{
+					url: 'https://example.com/source.mp4',
+					id: '488026661',
+				},
+				{
+					url: 'https://example.com/source-2.mp4',
+					id: '488026662',
+				},
+			],
 		})
 	})
 
-	it('可以查询任务状态并映射完成结果', async () => {
+	it('可以批量查询任务状态并映射完成结果', async () => {
 		vi.stubEnv('VITE_GHOSTCUT_BASE_URL', 'https://api.zhaoli.com')
 		vi.stubEnv('VITE_GHOSTCUT_APP_KEY', 'demo-key')
 		vi.stubEnv('VITE_GHOSTCUT_APP_SECRET', 'demo-secret')
@@ -77,27 +104,62 @@ describe('ghostcut api', () => {
 		const fetchMock = vi.fn().mockResolvedValue({
 			ok: true,
 			json: async () => ({
-				id: 'task-123',
-				processStatus: 1,
-				videoUrl: 'https://example.com/result.mp4',
+				code: 1000,
+				msg: 'success',
+				body: {
+					content: [
+						{
+							id: 488026661,
+							idProject: 230953994,
+							processStatus: 1,
+							processProgress: 100,
+							videoUrl: 'https://example.com/result.mp4',
+							srcSrtUrl: 'https://example.com/source.srt',
+							tgtSrtUrl: 'https://example.com/target.srt',
+							sourceVideoUrl: 'https://example.com/clean.mp4',
+							idVeOcrTranslateTask: 7302345,
+						},
+						{
+							id: 488026662,
+							idProject: 230953994,
+							processStatus: 2,
+							errorDetail: '处理失败',
+						},
+					],
+				},
 			}),
 		})
 		vi.stubGlobal('fetch', fetchMock)
 
-		const result = await getGhostCutTaskStatus('task-123')
+		const result = await getGhostCutTaskStatuses(['488026661', '488026662'])
 
 		expect(fetchMock).toHaveBeenCalledWith(
 			'https://api.zhaoli.com/v-w-c/gateway/ve/work/status',
 			expect.objectContaining({
 				method: 'POST',
-				body: '{"id":"task-123"}',
+				body: '{"idWorks":[488026661,488026662]}',
 			}),
 		)
-		expect(result).toEqual({
-			taskId: 'task-123',
-			status: 'completed',
-			processStatus: 1,
-			resultUrl: 'https://example.com/result.mp4',
-		})
+		expect(result).toEqual([
+			{
+				taskId: '488026661',
+				idProject: '230953994',
+				status: 'completed',
+				processStatus: 1,
+				progress: 100,
+				resultUrl: 'https://example.com/result.mp4',
+				srcSrtUrl: 'https://example.com/source.srt',
+				tgtSrtUrl: 'https://example.com/target.srt',
+				sourceVideoUrl: 'https://example.com/clean.mp4',
+				ocrTranslateTaskId: '7302345',
+			},
+			{
+				taskId: '488026662',
+				idProject: '230953994',
+				status: 'failed',
+				processStatus: 2,
+				errorMessage: '处理失败',
+			},
+		])
 	})
 })

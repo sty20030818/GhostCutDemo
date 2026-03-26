@@ -1,5 +1,23 @@
 import { fireEvent, render, screen, waitFor } from '@testing-library/react'
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+
+const { runTaskBatchMock, startPollingMock, stopPollingMock } = vi.hoisted(() => ({
+	runTaskBatchMock: vi.fn().mockResolvedValue(undefined),
+	startPollingMock: vi.fn(),
+	stopPollingMock: vi.fn(),
+}))
+
+vi.mock('@/lib/task-runner', () => ({
+	runTaskBatch: runTaskBatchMock,
+}))
+
+vi.mock('@/hooks/use-task-polling', () => ({
+	useTaskPolling: () => ({
+		start: startPollingMock,
+		stop: stopPollingMock,
+		isPolling: false,
+	}),
+}))
 
 import App from '@/App'
 import { clearTasks } from '@/lib/db'
@@ -7,6 +25,9 @@ import { taskStore } from '@/store/task-store'
 
 describe('TaskDashboardPage', () => {
 	beforeEach(() => {
+		runTaskBatchMock.mockClear()
+		startPollingMock.mockClear()
+		stopPollingMock.mockClear()
 		taskStore.setState({
 			tasks: [],
 			selectedTaskId: null,
@@ -50,6 +71,7 @@ describe('TaskDashboardPage', () => {
 		await waitFor(() => {
 			expect(screen.getByText('新的本地任务')).toBeInTheDocument()
 		})
+		expect(runTaskBatchMock).toHaveBeenCalledTimes(1)
 	})
 
 	it('选中文件后会在上传区展示真实文件名', () => {

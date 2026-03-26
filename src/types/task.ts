@@ -46,10 +46,15 @@ export type TaskFile = {
 	size: string
 	status: TaskFileStatus
 	progress: number
+	idProject?: string
 	tosKey?: string
 	sourceUrl?: string
 	ghostcutTaskId?: string
 	resultUrl?: string
+	sourceVideoUrl?: string
+	srcSrtUrl?: string
+	tgtSrtUrl?: string
+	ocrTranslateTaskId?: string
 	resultLabel?: string
 	error?: string
 }

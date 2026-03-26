@@ -1,12 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { BarChart3Icon, DatabaseIcon, SparklesIcon } from 'lucide-react'
 
+import { useTaskPolling } from '@/hooks/use-task-polling'
+import { runTaskBatch } from '@/lib/task-runner'
 import { ResultPanel } from '@/components/result/result-panel'
 import { TaskList } from '@/components/task/task-list'
 import { UploadPanel } from '@/components/upload/upload-panel'
 import { Badge } from '@/components/ui/badge'
 import { mockTasks, sourceLanguageOptions, targetLanguageOptions } from '@/pages/task-dashboard.mock'
-import { useTaskStore } from '@/store/task-store'
+import { taskStore, useTaskStore } from '@/store/task-store'
 import type { PendingUploadFile, TaskResult, TranslateTask } from '@/types/task'
 
 function buildTaskResults(tasks: TranslateTask[]): TaskResult[] {
@@ -51,16 +53,20 @@ function buildPendingUploadFiles(files: File[]): PendingUploadFile[] {
 	}))
 }
 
+function hasPollingCandidates(tasks: TranslateTask[]) {
+	return tasks.some((task) => task.files.some((file) => file.status === 'processing' && file.ghostcutTaskId))
+}
+
 export function TaskDashboardPage() {
 	const resultPanelRef = useRef<HTMLDivElement | null>(null)
 	const [selectedFiles, setSelectedFiles] = useState<File[]>([])
+	const { start: startPolling } = useTaskPolling()
 	const tasks = useTaskStore((state) => state.tasks)
 	const selectedTaskId = useTaskStore((state) => state.selectedTaskId)
 	const isPolling = useTaskStore((state) => state.isPolling)
 	const loadTasksFromDB = useTaskStore((state) => state.loadTasksFromDB)
 	const bootstrapDemoTasks = useTaskStore((state) => state.bootstrapDemoTasks)
 	const createLocalTask = useTaskStore((state) => state.createLocalTask)
-	const uploadTaskFiles = useTaskStore((state) => state.uploadTaskFiles)
 	const setSelectedTaskId = useTaskStore((state) => state.setSelectedTaskId)
 
 	useEffect(() => {
@@ -68,16 +74,20 @@ export function TaskDashboardPage() {
 
 		void (async () => {
 			const storedTasks = await loadTasksFromDB()
+			const nextTasks
+				= active && storedTasks.length === 0
+					? await bootstrapDemoTasks(mockTasks)
+					: storedTasks
 
-			if (active && storedTasks.length === 0) {
-				await bootstrapDemoTasks(mockTasks)
+			if (active && hasPollingCandidates(nextTasks)) {
+				startPolling()
 			}
 		})()
 
 		return () => {
 			active = false
 		}
-	}, [bootstrapDemoTasks, loadTasksFromDB])
+	}, [bootstrapDemoTasks, loadTasksFromDB, startPolling])
 
 	const results = useMemo(() => buildTaskResults(tasks), [tasks])
 	const pendingFiles = useMemo(() => buildPendingUploadFiles(selectedFiles), [selectedFiles])
@@ -112,12 +122,17 @@ export function TaskDashboardPage() {
 
 		const task = await createLocalTask({
 			taskName: '新的本地任务',
-			sourceLanguage: sourceLanguageOptions[1]?.label ?? '自动识别',
-			targetLanguage: targetLanguageOptions[2]?.label ?? 'English',
+			sourceLanguage: sourceLanguageOptions[2]?.value ?? 'zh',
+			targetLanguage: targetLanguageOptions[2]?.value ?? 'en',
 			files: pendingFiles,
 		})
 
-		await uploadTaskFiles(task.id, selectedFiles)
+		await runTaskBatch({
+			store: taskStore,
+			taskId: task.id,
+			files: selectedFiles,
+		})
+		startPolling()
 		setSelectedFiles([])
 	}
 
@@ -136,18 +151,18 @@ export function TaskDashboardPage() {
 						<div className='flex flex-col gap-3'>
 							<Badge variant='outline'>
 								<SparklesIcon data-icon='inline-start' />
-								阶段六 · 上传模块
+								阶段八 · 调度与轮询
 							</Badge>
 							<div className='flex flex-col gap-2'>
 								<h1 className='font-heading text-3xl font-medium tracking-tight sm:text-4xl'>GhostCut 任务工作台</h1>
 								<p className='max-w-3xl text-sm leading-6 text-muted-foreground sm:text-base'>
-									页面现在已经接入上传适配层，创建本地任务后会自动把演示文件串行上传并把返回 URL 写回任务状态。
+									页面现在会在创建任务后顺序执行上传与提交，并对处理中任务启动统一轮询，刷新后也能继续恢复。
 								</p>
 							</div>
 						</div>
 						<div className='flex items-center gap-2 rounded-2xl border border-border/60 bg-muted/40 px-3 py-2 text-sm text-muted-foreground'>
 							{isPolling ? <BarChart3Icon className='size-4' /> : <DatabaseIcon className='size-4' />}
-							<span>{isPolling ? '轮询状态预留中' : '当前页面由 store + IndexedDB + 上传模块驱动'}</span>
+							<span>{isPolling ? '统一轮询运行中' : '当前页面由 store + 调度器 + 轮询器驱动'}</span>
 						</div>
 					</div>
 					<div className='grid gap-3 sm:grid-cols-3'>

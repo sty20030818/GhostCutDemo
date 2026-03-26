@@ -13,7 +13,22 @@ type CreateLocalTaskInput = {
 }
 
 type MarkFileStatusInput = Partial<
-	Pick<TaskFile, 'status' | 'progress' | 'tosKey' | 'sourceUrl' | 'ghostcutTaskId' | 'resultUrl' | 'resultLabel' | 'error'>
+	Pick<
+		TaskFile,
+		| 'status'
+		| 'progress'
+		| 'idProject'
+		| 'tosKey'
+		| 'sourceUrl'
+		| 'ghostcutTaskId'
+		| 'resultUrl'
+		| 'sourceVideoUrl'
+		| 'srcSrtUrl'
+		| 'tgtSrtUrl'
+		| 'ocrTranslateTaskId'
+		| 'resultLabel'
+		| 'error'
+	>
 >
 
 export type TaskStoreState = {
@@ -43,6 +58,10 @@ function getInitialSelectedTaskId(tasks: TranslateTask[], selectedTaskId: string
 function deriveBatchStatus(files: TaskFile[]): TaskBatchStatus {
 	if (files.length === 0) {
 		return 'draft'
+	}
+
+	if (files.some((file) => ['uploading', 'uploaded', 'submitting', 'processing'].includes(file.status))) {
+		return 'processing'
 	}
 
 	if (files.every((file) => file.status === 'completed')) {
@@ -270,6 +289,7 @@ export function createTaskStore(
 	}))
 }
 
+export type TaskStoreApi = ReturnType<typeof createTaskStore>
 export const taskStore = createTaskStore()
 
 export function useTaskStore<T>(selector: (state: TaskStoreState) => T) {
