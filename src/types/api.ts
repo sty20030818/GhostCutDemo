@@ -7,19 +7,21 @@ export type UploadToTosResult = {
 
 export type CreateGhostCutTaskRequest = {
 	urls: string[]
-	sourceLanguage: LanguageCode
-	targetLanguage: LanguageCode
-	taskName?: string
+	needChineseOcclude: 11
+	videoInpaintLang: LanguageCode
+	lang: LanguageCode
+	videoInpaintMasks?: string
+	bboxGroups?: string
 }
 
 export type CreateGhostCutTaskResponse = {
-	requestId: string
-	taskIds: string[]
+	id: string
 }
 
 export type GetGhostCutTaskStatusResponse = {
 	taskId: string
 	status: Extract<TaskFileStatus, 'processing' | 'completed' | 'failed'>
+	processStatus?: number
 	progress?: number
 	resultUrl?: string
 	errorMessage?: string
