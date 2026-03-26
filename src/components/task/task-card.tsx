@@ -14,7 +14,7 @@ type TaskCardProps = {
 export function TaskCard({ task, isSelected = false, onSelect }: TaskCardProps) {
 	return (
 		<Card
-			className={`border-border/80 bg-card/95 transition-all ${isSelected ? 'ring-2 ring-primary/30' : ''}`}
+			className={`overflow-visible border-border/80 bg-card/95 transition-all ${isSelected ? 'ring-2 ring-primary/30' : ''}`}
 			onClick={onSelect}>
 			<CardHeader className='flex flex-col gap-3'>
 				<div className='flex items-start justify-between gap-3'>

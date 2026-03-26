@@ -24,7 +24,7 @@ export function TaskList({ tasks, selectedTaskId = null, onSelectTask }: TaskLis
 					</div>
 				</div>
 			</CardHeader>
-			<CardContent className='flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto'>
+			<CardContent className='flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto pt-1'>
 				{tasks.length === 0 ? (
 					<div className='rounded-xl border border-dashed border-border/80 bg-muted/20 p-6 text-sm text-muted-foreground'>
 						还没有任务，点击左侧“创建任务”先生成一个本地演示任务。
