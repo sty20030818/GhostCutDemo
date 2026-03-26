@@ -1,13 +1,12 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
-import { BarChart3Icon, DatabaseIcon, SparklesIcon } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import { useTaskPolling } from '@/hooks/use-task-polling'
+import { formatDuration, probeVideoDuration } from '@/lib/probe-duration'
 import { runTaskBatch } from '@/lib/task-runner'
 import { ResultPanel } from '@/components/result/result-panel'
 import { TaskList } from '@/components/task/task-list'
 import { UploadPanel } from '@/components/upload/upload-panel'
-import { Badge } from '@/components/ui/badge'
-import { mockTasks, sourceLanguageOptions, targetLanguageOptions } from '@/pages/task-dashboard.mock'
+import { sourceLanguageOptions, targetLanguageOptions } from '@/constants/language'
 import { taskStore, useTaskStore } from '@/store/task-store'
 import type { PendingUploadFile, TranslateTask } from '@/types/task'
 
@@ -27,11 +26,12 @@ function formatFileSize(size: number) {
 	return `${size} B`
 }
 
-function buildPendingUploadFiles(files: File[]): PendingUploadFile[] {
+function buildPendingUploadFiles(files: File[], durationMap: Map<File, string>): PendingUploadFile[] {
 	return files.map((file, index) => ({
 		id: `${file.name}-${index}-${file.size}`,
 		name: file.name,
 		size: formatFileSize(file.size),
+		duration: durationMap.get(file),
 	}))
 }
 
@@ -42,12 +42,13 @@ function hasPollingCandidates(tasks: TranslateTask[]) {
 export function TaskDashboardPage() {
 	const resultPanelRef = useRef<HTMLDivElement | null>(null)
 	const [selectedFiles, setSelectedFiles] = useState<File[]>([])
+	const [durationMap, setDurationMap] = useState<Map<File, string>>(() => new Map())
+	const [sourceLanguage, setSourceLanguage] = useState('auto')
+	const [targetLanguage, setTargetLanguage] = useState('en')
 	const { start: startPolling } = useTaskPolling()
 	const tasks = useTaskStore((state) => state.tasks)
 	const selectedTaskId = useTaskStore((state) => state.selectedTaskId)
-	const isPolling = useTaskStore((state) => state.isPolling)
 	const loadTasksFromDB = useTaskStore((state) => state.loadTasksFromDB)
-	const bootstrapDemoTasks = useTaskStore((state) => state.bootstrapDemoTasks)
 	const createLocalTask = useTaskStore((state) => state.createLocalTask)
 	const setSelectedTaskId = useTaskStore((state) => state.setSelectedTaskId)
 
@@ -56,12 +57,8 @@ export function TaskDashboardPage() {
 
 		void (async () => {
 			const storedTasks = await loadTasksFromDB()
-			const nextTasks
-				= active && storedTasks.length === 0
-					? await bootstrapDemoTasks(mockTasks)
-					: storedTasks
 
-			if (active && hasPollingCandidates(nextTasks)) {
+			if (active && hasPollingCandidates(storedTasks)) {
 				startPolling()
 			}
 		})()
@@ -69,13 +66,31 @@ export function TaskDashboardPage() {
 		return () => {
 			active = false
 		}
-	}, [bootstrapDemoTasks, loadTasksFromDB, startPolling])
+	}, [loadTasksFromDB, startPolling])
 
 	const completedResultsCount = useMemo(
 		() => tasks.flatMap((task) => task.files).filter((file) => file.status === 'completed').length,
 		[tasks],
 	)
-	const pendingFiles = useMemo(() => buildPendingUploadFiles(selectedFiles), [selectedFiles])
+	const pendingFiles = useMemo(() => buildPendingUploadFiles(selectedFiles, durationMap), [selectedFiles, durationMap])
+
+	/** 异步探测新文件的时长，探测完逐个写入 durationMap */
+	const probeNewFiles = useCallback((files: File[]) => {
+		for (const file of files) {
+			if (durationMap.has(file)) continue
+			void probeVideoDuration(file)
+				.then((seconds) => {
+					setDurationMap((prev) => {
+						const next = new Map(prev)
+						next.set(file, formatDuration(seconds))
+						return next
+					})
+				})
+				.catch(() => {
+					// 探测失败保持 --:--
+				})
+		}
+	}, [durationMap])
 	const overviewItems = useMemo(
 		() => [
 			{
@@ -107,8 +122,8 @@ export function TaskDashboardPage() {
 
 		const task = await createLocalTask({
 			taskName: '新的本地任务',
-			sourceLanguage: sourceLanguageOptions[2]?.value ?? 'zh',
-			targetLanguage: targetLanguageOptions[2]?.value ?? 'en',
+			sourceLanguage,
+			targetLanguage,
 			files: pendingFiles,
 		})
 
@@ -119,6 +134,7 @@ export function TaskDashboardPage() {
 		})
 		startPolling()
 		setSelectedFiles([])
+		setDurationMap(new Map())
 	}
 
 	function handleShowResults() {
@@ -131,32 +147,20 @@ export function TaskDashboardPage() {
 	return (
 		<div className='h-svh overflow-hidden bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.92),transparent_38%),linear-gradient(180deg,rgba(241,245,249,0.95),rgba(248,250,252,1))] px-2 py-2 text-foreground sm:px-3 sm:py-3 xl:px-4 xl:py-4'>
 			<div className='flex h-full w-full flex-col gap-3'>
-				<header className='flex flex-col gap-3 rounded-[1.75rem] border border-border/70 bg-background/85 p-4 shadow-sm backdrop-blur sm:p-5'>
-					<div className='flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between'>
-						<div className='flex flex-col gap-3'>
-							<Badge variant='outline'>
-								<SparklesIcon data-icon='inline-start' />
-								阶段九 · 完整链路联调
-							</Badge>
-							<div className='flex flex-col gap-2'>
-								<h1 className='font-heading text-3xl font-medium tracking-tight sm:text-4xl'>GhostCut 任务工作台</h1>
-								<p className='max-w-3xl text-sm leading-6 text-muted-foreground sm:text-base'>
-									页面现在已经把上传、批量提交、统一轮询和结果分组展示串成完整链路，刷新后也能继续恢复处理中任务。
-								</p>
-							</div>
-						</div>
-						<div className='flex items-center gap-2 rounded-2xl border border-border/60 bg-muted/40 px-3 py-2 text-sm text-muted-foreground'>
-							{isPolling ? <BarChart3Icon className='size-4' /> : <DatabaseIcon className='size-4' />}
-							<span>{isPolling ? '统一轮询运行中' : '当前页面由 store + 调度器 + 轮询器驱动'}</span>
-						</div>
+				<header className='flex items-center justify-between gap-4 rounded-[1.75rem] border border-border/70 bg-background/85 px-4 py-3 shadow-sm backdrop-blur sm:px-5'>
+					<div className='flex flex-col gap-1'>
+						<h1 className='font-heading text-xl font-medium tracking-tight sm:text-2xl'>GhostCut 任务工作台</h1>
+						<p className='max-w-2xl text-xs leading-5 text-muted-foreground sm:text-sm'>
+							上传、批量提交、统一轮询和结果分组展示已串成完整链路。
+						</p>
 					</div>
-					<div className='grid gap-3 sm:grid-cols-3'>
+					<div className='flex shrink-0 items-center gap-3'>
 						{overviewItems.map((item) => (
 							<div
 								key={item.label}
-								className='rounded-2xl border border-border/70 bg-card/80 px-4 py-3'>
-								<p className='text-xs tracking-[0.2em] text-muted-foreground uppercase'>{item.label}</p>
-								<p className='mt-2 font-heading text-2xl font-medium'>{item.value}</p>
+								className='rounded-2xl border border-border/70 bg-card/80 px-5 py-3 text-center'>
+								<p className='text-xs tracking-[0.15em] text-muted-foreground uppercase'>{item.label}</p>
+								<p className='mt-1 font-heading text-2xl font-medium'>{item.value}</p>
 							</div>
 						))}
 					</div>
@@ -167,9 +171,17 @@ export function TaskDashboardPage() {
 						<UploadPanel
 							sourceLanguageOptions={sourceLanguageOptions}
 							targetLanguageOptions={targetLanguageOptions}
+							sourceLanguage={sourceLanguage}
+							targetLanguage={targetLanguage}
+							onSourceLanguageChange={setSourceLanguage}
+							onTargetLanguageChange={setTargetLanguage}
 							pendingFiles={pendingFiles}
-							onFilesChange={setSelectedFiles}
-							onCreateTask={handleCreateTask}
+						onFilesChange={(newFiles) => {
+							probeNewFiles(newFiles)
+							setSelectedFiles((prev) => [...prev, ...newFiles])
+						}}
+						onRemoveFile={(index) => setSelectedFiles((prev) => prev.filter((_, i) => i !== index))}
+						onCreateTask={handleCreateTask}
 							onShowResults={handleShowResults}
 						/>
 					</div>

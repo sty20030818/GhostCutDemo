@@ -69,7 +69,7 @@ describe('TaskDashboardPage', () => {
 		fireEvent.click(screen.getByRole('button', { name: '创建任务' }))
 
 		await waitFor(() => {
-			expect(screen.getByText('新的本地任务')).toBeInTheDocument()
+			expect(screen.getByText(/任务 #/)).toBeInTheDocument()
 		})
 		expect(runTaskBatchMock).toHaveBeenCalledTimes(1)
 	})

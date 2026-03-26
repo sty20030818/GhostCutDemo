@@ -3,14 +3,18 @@ import type { LanguageOption } from '@/types/task'
 
 type TargetLanguageSelectorProps = {
 	items: LanguageOption[]
+	value?: string
+	onValueChange?: (value: string) => void
 }
 
-export function TargetLanguageSelector({ items }: TargetLanguageSelectorProps) {
+export function TargetLanguageSelector({ items, value, onValueChange }: TargetLanguageSelectorProps) {
 	return (
 		<LanguageSelector
 			label='目标语言'
-			description='这里先展示单选下拉，后续阶段再映射到 GhostCut 请求体。'
+			description='选择翻译后的输出语言。'
 			items={items}
+			value={value}
+			onValueChange={onValueChange}
 		/>
 	)
 }

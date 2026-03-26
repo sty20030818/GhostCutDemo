@@ -52,6 +52,17 @@ function normalizeIdValue(id: string) {
 function normalizeGhostCutLanguage(language: LanguageCode) {
 	const normalized = language.trim().toLowerCase()
 
+	// `videoInpaintLang/lang` 里 GhostCut 对繁体有独立 code（`zh-hant`）。
+	// 不能把 `zh-hant` 折叠成 `zh`，否则会导致繁体字幕/配音方向出错。
+	if (
+		normalized === 'zh-hant' ||
+		normalized.includes('zh-hant') ||
+		normalized.includes('繁體') ||
+		normalized.includes('繁体')
+	) {
+		return 'zh-hant'
+	}
+
 	if (normalized.startsWith('zh') || normalized.includes('中文')) {
 		return 'zh'
 	}

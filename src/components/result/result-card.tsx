@@ -1,5 +1,6 @@
 import { CheckCircle2Icon, FileArchiveIcon } from 'lucide-react'
 
+import { getLanguageLabel } from '@/constants/language'
 import { DownloadAction } from '@/components/result/download-action'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
@@ -58,7 +59,7 @@ export function ResultCard({ result }: ResultCardProps) {
 
 	return (
 		<Card className='border-border/80 bg-card/95'>
-			<CardContent className='flex flex-col gap-4 pt-4'>
+			<CardContent className='flex flex-col gap-4'>
 				<div className='flex items-start justify-between gap-3'>
 					<div className='flex min-w-0 items-start gap-3'>
 						<div className='flex size-10 shrink-0 items-center justify-center rounded-xl bg-secondary text-secondary-foreground'>
@@ -78,19 +79,11 @@ export function ResultCard({ result }: ResultCardProps) {
 				<div className='grid grid-cols-2 gap-3 text-xs text-muted-foreground'>
 					<div className='flex flex-col gap-1 rounded-lg border border-border/70 bg-muted/40 p-3'>
 						<span>目标语言</span>
-						<span className='text-sm font-medium text-foreground'>{result.targetLanguage}</span>
-					</div>
-					<div className='flex flex-col gap-1 rounded-lg border border-border/70 bg-muted/40 p-3'>
-						<span>输出格式</span>
-						<span className='text-sm font-medium text-foreground'>{result.format}</span>
+						<span className='text-sm font-medium text-foreground'>{getLanguageLabel(result.targetLanguage)}</span>
 					</div>
 					<div className='flex flex-col gap-1 rounded-lg border border-border/70 bg-muted/40 p-3'>
 						<span>完成时间</span>
 						<span className='text-sm font-medium text-foreground'>{result.finishedAt}</span>
-					</div>
-					<div className='flex flex-col gap-1 rounded-lg border border-border/70 bg-muted/40 p-3'>
-						<span>任务编号</span>
-						<span className='truncate text-sm font-medium text-foreground'>{result.ocrTranslateTaskId ?? '未返回'}</span>
 					</div>
 				</div>
 

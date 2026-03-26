@@ -38,7 +38,6 @@ export type TaskStoreState = {
 	setSelectedTaskId: (taskId: string | null) => void
 	setIsPolling: (isPolling: boolean) => void
 	loadTasksFromDB: () => Promise<TranslateTask[]>
-	bootstrapDemoTasks: (tasks: TranslateTask[]) => Promise<TranslateTask[]>
 	createLocalTask: (input: CreateLocalTaskInput) => Promise<TranslateTask>
 	uploadTaskFiles: (taskId: string, files: File[]) => Promise<void>
 	updateTask: (task: TranslateTask) => Promise<void>
@@ -88,7 +87,7 @@ function buildPendingTaskFiles(files: PendingUploadFile[]): TaskFile[] {
 		id: file.id,
 		name: file.name,
 		size: file.size,
-		duration: '--:--',
+		duration: file.duration ?? '--:--',
 		status: 'pending',
 		progress: 0,
 	}))
@@ -165,19 +164,6 @@ export function createTaskStore(
 
 		async loadTasksFromDB() {
 			const tasks = await getAllTasks()
-			set((state) => ({
-				tasks,
-				selectedTaskId: getInitialSelectedTaskId(tasks, state.selectedTaskId),
-			}))
-			return tasks
-		},
-
-		async bootstrapDemoTasks(tasks) {
-			if (get().tasks.length > 0) {
-				return get().tasks
-			}
-
-			await Promise.all(tasks.map((task) => saveTask(task)))
 			set((state) => ({
 				tasks,
 				selectedTaskId: getInitialSelectedTaskId(tasks, state.selectedTaskId),

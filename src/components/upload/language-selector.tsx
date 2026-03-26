@@ -15,9 +15,11 @@ type LanguageSelectorProps = {
 	label: string
 	description: string
 	items: LanguageOption[]
+	value?: string
+	onValueChange?: (value: string) => void
 }
 
-export function LanguageSelector({ label, description, items }: LanguageSelectorProps) {
+export function LanguageSelector({ label, description, items, value, onValueChange }: LanguageSelectorProps) {
 	return (
 		<div className='flex flex-col gap-2'>
 			<div className='flex items-start justify-between gap-3'>
@@ -27,7 +29,7 @@ export function LanguageSelector({ label, description, items }: LanguageSelector
 				</div>
 				<Globe2Icon className='mt-0.5 size-4 text-muted-foreground' />
 			</div>
-			<Select items={items}>
+			<Select items={items} value={value} onValueChange={(v) => { if (v) onValueChange?.(v) }}>
 				<SelectTrigger className='w-full'>
 					<SelectValue />
 				</SelectTrigger>

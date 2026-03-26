@@ -20,7 +20,7 @@ class GhostCutDatabase extends Dexie {
 export const ghostCutDb = new GhostCutDatabase()
 
 export async function getAllTasks() {
-	return ghostCutDb.tasks.toArray()
+	return ghostCutDb.tasks.orderBy('createdAt').reverse().toArray()
 }
 
 export async function getTaskById(taskId: string) {

@@ -2,27 +2,14 @@ import { TosClient } from '@volcengine/tos-sdk'
 
 import type { UploadToTosResult } from '@/types/api'
 
-const DEFAULT_MOCK_UPLOAD_DELAY = 160
-const MOCK_UPLOAD_MODE = 'mock'
-const SDK_UPLOAD_MODE = 'sdk'
 const DEFAULT_OBJECT_PREFIX = 'ghostcut-demo'
 
 type UploadToTosOptions = {
 	timeoutMs?: number
 }
 
-function getUploadMode() {
-	return import.meta.env.VITE_TOS_UPLOAD_MODE ?? MOCK_UPLOAD_MODE
-}
-
 function getObjectPrefix() {
 	return import.meta.env.VITE_TOS_OBJECT_PREFIX?.trim() || DEFAULT_OBJECT_PREFIX
-}
-
-function getMockDelay() {
-	const rawDelay = Number(import.meta.env.VITE_MOCK_TOS_DELAY_MS ?? DEFAULT_MOCK_UPLOAD_DELAY)
-
-	return Number.isFinite(rawDelay) && rawDelay >= 0 ? rawDelay : DEFAULT_MOCK_UPLOAD_DELAY
 }
 
 function assertUploadFile(file: File) {
@@ -33,11 +20,6 @@ function assertUploadFile(file: File) {
 	if (file.size <= 0) {
 		throw new Error('上传文件不能为空')
 	}
-}
-
-function buildMockObjectKey(file: File) {
-	const randomId = globalThis.crypto?.randomUUID?.() ?? `${Date.now()}`
-	return `mock/${randomId}-${file.name}`
 }
 
 function normalizeEndpoint(endpoint: string) {
@@ -104,20 +86,6 @@ function withTimeout<T>(promise: Promise<T>, timeoutMs: number) {
 	})
 }
 
-async function mockUploadToTos(file: File): Promise<UploadToTosResult> {
-	const key = buildMockObjectKey(file)
-	const url = URL.createObjectURL(file)
-
-	return new Promise((resolve) => {
-		globalThis.setTimeout(() => {
-			resolve({
-				key,
-				url,
-			})
-		}, getMockDelay())
-	})
-}
-
 async function sdkUploadToTos(file: File): Promise<UploadToTosResult> {
 	const bucket = getRequiredEnv('VITE_TOS_BUCKET')
 	const endpoint = getRequiredEnv('VITE_TOS_ENDPOINT')
@@ -140,11 +108,9 @@ async function sdkUploadToTos(file: File): Promise<UploadToTosResult> {
 export async function uploadToTos(file: File, options: UploadToTosOptions = {}): Promise<UploadToTosResult> {
 	assertUploadFile(file)
 
-	const uploadMode = getUploadMode()
 	const timeoutMs = options.timeoutMs ?? 10_000
+	const result = await withTimeout(sdkUploadToTos(file), timeoutMs)
 
-	const uploadPromise = uploadMode === SDK_UPLOAD_MODE ? sdkUploadToTos(file) : mockUploadToTos(file)
-	const result = await withTimeout(uploadPromise, timeoutMs)
 	if (!result.url) {
 		throw new Error('上传返回的 URL 为空')
 	}
