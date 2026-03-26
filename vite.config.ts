@@ -11,4 +11,13 @@ export default defineConfig({
 			'@': path.resolve(__dirname, './src'),
 		},
 	},
+	server: {
+		proxy: {
+			'/api/ghostcut': {
+				target: 'https://api.zhaoli.com',
+				changeOrigin: true,
+				rewrite: (requestPath) => requestPath.replace(/^\/api\/ghostcut/, ''),
+			},
+		},
+	},
 })
