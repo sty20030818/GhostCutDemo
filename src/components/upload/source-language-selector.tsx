@@ -1,8 +1,8 @@
 import { LanguageSelector } from '@/components/upload/language-selector'
-import type { DashboardLanguageOption } from '@/pages/task-dashboard.mock'
+import type { LanguageOption } from '@/types/task'
 
 type SourceLanguageSelectorProps = {
-	items: DashboardLanguageOption[]
+	items: LanguageOption[]
 }
 
 export function SourceLanguageSelector({ items }: SourceLanguageSelectorProps) {

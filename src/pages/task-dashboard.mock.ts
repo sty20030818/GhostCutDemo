@@ -1,41 +1,6 @@
-export type DashboardLanguageOption = {
-	label: string
-	value: string | null
-}
+import type { LanguageOption, PendingUploadFile, TaskResult, TranslateTask } from '@/types/task'
 
-export type DashboardTaskStatus = 'queued' | 'uploading' | 'processing' | 'completed' | 'failed'
-
-export type DashboardTaskFile = {
-	id: string
-	name: string
-	duration: string
-	size: string
-	status: DashboardTaskStatus
-	progress: number
-	resultLabel?: string
-	error?: string
-}
-
-export type DashboardTask = {
-	id: string
-	name: string
-	createdAt: string
-	sourceLanguage: string
-	targetLanguage: string
-	status: DashboardTaskStatus
-	files: DashboardTaskFile[]
-}
-
-export type DashboardResult = {
-	id: string
-	taskName: string
-	fileName: string
-	targetLanguage: string
-	finishedAt: string
-	format: string
-}
-
-export const sourceLanguageOptions: DashboardLanguageOption[] = [
+export const sourceLanguageOptions: LanguageOption[] = [
 	{ label: '选择源语言', value: null },
 	{ label: '自动识别', value: 'auto' },
 	{ label: '中文', value: 'zh' },
@@ -43,7 +8,7 @@ export const sourceLanguageOptions: DashboardLanguageOption[] = [
 	{ label: '日本語', value: 'ja' },
 ]
 
-export const targetLanguageOptions: DashboardLanguageOption[] = [
+export const targetLanguageOptions: LanguageOption[] = [
 	{ label: '选择目标语言', value: null },
 	{ label: '简体中文', value: 'zh-CN' },
 	{ label: 'English', value: 'en-US' },
@@ -51,13 +16,13 @@ export const targetLanguageOptions: DashboardLanguageOption[] = [
 	{ label: '한국어', value: 'ko-KR' },
 ]
 
-export const pendingFiles = [
+export const pendingFiles: PendingUploadFile[] = [
 	{ id: 'file-1', name: 'brand-intro.mp4', size: '128 MB' },
 	{ id: 'file-2', name: 'feature-demo.mov', size: '246 MB' },
 	{ id: 'file-3', name: 'customer-story.mp4', size: '88 MB' },
 ]
 
-export const mockTasks: DashboardTask[] = [
+export const mockTasks: TranslateTask[] = [
 	{
 		id: 'task-1',
 		name: '品牌视频首批翻译',
@@ -125,7 +90,7 @@ export const mockTasks: DashboardTask[] = [
 	},
 ]
 
-export const mockResults: DashboardResult[] = [
+export const mockResults: TaskResult[] = [
 	{
 		id: 'result-1',
 		taskName: '客户案例二次校对',

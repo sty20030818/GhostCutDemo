@@ -1,10 +1,10 @@
 import { FileVideo2Icon } from 'lucide-react'
 
 import { TaskStatusBadge } from '@/components/task/task-status-badge'
-import type { DashboardTaskFile } from '@/pages/task-dashboard.mock'
+import type { TaskFile } from '@/types/task'
 
 type TaskFileItemProps = {
-	file: DashboardTaskFile
+	file: TaskFile
 }
 
 export function TaskFileItem({ file }: TaskFileItemProps) {

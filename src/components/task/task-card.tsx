@@ -3,10 +3,10 @@ import { Clock4Icon, LanguagesIcon } from 'lucide-react'
 import { TaskFileItem } from '@/components/task/task-file-item'
 import { TaskStatusBadge } from '@/components/task/task-status-badge'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
-import type { DashboardTask } from '@/pages/task-dashboard.mock'
+import type { TranslateTask } from '@/types/task'
 
 type TaskCardProps = {
-	task: DashboardTask
+	task: TranslateTask
 }
 
 export function TaskCard({ task }: TaskCardProps) {

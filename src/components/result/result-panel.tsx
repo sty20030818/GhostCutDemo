@@ -2,10 +2,10 @@ import { DownloadCloudIcon } from 'lucide-react'
 
 import { ResultCard } from '@/components/result/result-card'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
-import type { DashboardResult } from '@/pages/task-dashboard.mock'
+import type { TaskResult } from '@/types/task'
 
 type ResultPanelProps = {
-	results: DashboardResult[]
+	results: TaskResult[]
 }
 
 export function ResultPanel({ results }: ResultPanelProps) {

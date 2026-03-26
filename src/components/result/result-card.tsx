@@ -3,10 +3,10 @@ import { CheckCircle2Icon, FileArchiveIcon } from 'lucide-react'
 import { DownloadAction } from '@/components/result/download-action'
 import { Badge } from '@/components/ui/badge'
 import { Card, CardContent } from '@/components/ui/card'
-import type { DashboardResult } from '@/pages/task-dashboard.mock'
+import type { TaskResult } from '@/types/task'
 
 type ResultCardProps = {
-	result: DashboardResult
+	result: TaskResult
 }
 
 export function ResultCard({ result }: ResultCardProps) {

@@ -2,10 +2,10 @@ import { FolderClockIcon } from 'lucide-react'
 
 import { TaskCard } from '@/components/task/task-card'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
-import type { DashboardTask } from '@/pages/task-dashboard.mock'
+import type { TranslateTask } from '@/types/task'
 
 type TaskListProps = {
-	tasks: DashboardTask[]
+	tasks: TranslateTask[]
 }
 
 export function TaskList({ tasks }: TaskListProps) {

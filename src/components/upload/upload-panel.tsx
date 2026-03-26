@@ -5,18 +5,12 @@ import { SourceLanguageSelector } from '@/components/upload/source-language-sele
 import { TargetLanguageSelector } from '@/components/upload/target-language-selector'
 import { TaskOptionForm } from '@/components/upload/task-option-form'
 import { Card, CardContent, CardDescription, CardHeader } from '@/components/ui/card'
-import type { DashboardLanguageOption } from '@/pages/task-dashboard.mock'
-
-type PendingFile = {
-	id: string
-	name: string
-	size: string
-}
+import type { LanguageOption, PendingUploadFile } from '@/types/task'
 
 type UploadPanelProps = {
-	sourceLanguageOptions: DashboardLanguageOption[]
-	targetLanguageOptions: DashboardLanguageOption[]
-	pendingFiles: PendingFile[]
+	sourceLanguageOptions: LanguageOption[]
+	targetLanguageOptions: LanguageOption[]
+	pendingFiles: PendingUploadFile[]
 }
 
 export function UploadPanel({ sourceLanguageOptions, targetLanguageOptions, pendingFiles }: UploadPanelProps) {

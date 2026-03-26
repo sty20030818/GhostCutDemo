@@ -1,6 +1,5 @@
 import { Globe2Icon } from 'lucide-react'
 
-import type { DashboardLanguageOption } from '@/pages/task-dashboard.mock'
 import {
 	Select,
 	SelectContent,
@@ -10,11 +9,12 @@ import {
 	SelectTrigger,
 	SelectValue,
 } from '@/components/ui/select'
+import type { LanguageOption } from '@/types/task'
 
 type LanguageSelectorProps = {
 	label: string
 	description: string
-	items: DashboardLanguageOption[]
+	items: LanguageOption[]
 }
 
 export function LanguageSelector({ label, description, items }: LanguageSelectorProps) {
