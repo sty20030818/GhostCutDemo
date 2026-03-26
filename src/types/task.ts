@@ -37,6 +37,7 @@ export type PendingUploadFile = {
 	id: string
 	name: string
 	size: string
+	duration?: string
 }
 
 export type TaskFile = {
@@ -92,7 +93,7 @@ export type TaskResultGroup = {
 	createdAt: string
 	sourceLanguage: LanguageCode
 	targetLanguage: LanguageCode
-	status: TaskBatchStatus
+	status: TaskStatus
 	totalCount: number
 	completedCount: number
 	failedCount: number

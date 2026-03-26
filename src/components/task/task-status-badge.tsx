@@ -62,10 +62,11 @@ const statusConfig = {
 
 export function TaskStatusBadge({ status }: TaskStatusBadgeProps) {
 	const { icon: Icon, label, variant } = statusConfig[status]
+	const shouldSpin = status === 'uploading' || status === 'submitting' || status === 'processing'
 
 	return (
 		<Badge variant={variant}>
-			<Icon data-icon='inline-start' />
+			<Icon data-icon='inline-start' className={shouldSpin ? 'animate-spin' : undefined} />
 			{label}
 		</Badge>
 	)

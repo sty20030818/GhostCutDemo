@@ -61,12 +61,12 @@ describe('ResultPanel', () => {
 
 		render(<ResultPanel tasks={tasks} />)
 
-		expect(screen.getByText('批次任务 A')).toBeInTheDocument()
+		expect(screen.getByText('任务 #task1')).toBeInTheDocument()
 		expect(screen.getByText('episode-1.mp4')).toBeInTheDocument()
-		expect(screen.queryByText('批次任务 B')).not.toBeInTheDocument()
+		expect(screen.queryByText('任务 #task2')).not.toBeInTheDocument()
 		expect(screen.queryByText('episode-2.mp4')).not.toBeInTheDocument()
 		expect(screen.getByText('1 / 2 已完成')).toBeInTheDocument()
-		expect(screen.getByText('zh -> en')).toBeInTheDocument()
+		expect(screen.getByText(/中文.*→.*英文/)).toBeInTheDocument()
 	})
 
 	it('会根据真实结果字段渲染对应链接操作', () => {
