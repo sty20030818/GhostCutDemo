@@ -5,13 +5,15 @@ import { Button } from '@/components/ui/button'
 type CreateTaskButtonProps = {
 	onCreateTask?: () => void
 	onShowResults?: () => void
+	disabled?: boolean
 }
 
-export function CreateTaskButton({ onCreateTask, onShowResults }: CreateTaskButtonProps) {
+export function CreateTaskButton({ onCreateTask, onShowResults, disabled }: CreateTaskButtonProps) {
 	return (
 		<div className='flex flex-col gap-2 sm:flex-row'>
 			<Button
 				className='sm:flex-1'
+				disabled={disabled}
 				onClick={onCreateTask}>
 				<UploadIcon data-icon='inline-start' />
 				创建任务

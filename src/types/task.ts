@@ -46,6 +46,7 @@ export type TaskFile = {
 	size: string
 	status: TaskFileStatus
 	progress: number
+	tosKey?: string
 	sourceUrl?: string
 	ghostcutTaskId?: string
 	resultUrl?: string

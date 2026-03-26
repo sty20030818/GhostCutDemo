@@ -35,10 +35,36 @@ describe('TaskDashboardPage', () => {
 	it('点击创建任务后会把新的本地任务渲染到列表中', async () => {
 		render(<App />)
 
+		const file = new File(['real-video'], 'real-upload.mp4', {
+			type: 'video/mp4',
+		})
+
+		fireEvent.change(screen.getByLabelText('选择本地视频文件'), {
+			target: {
+				files: [file],
+			},
+		})
+
 		fireEvent.click(screen.getByRole('button', { name: '创建任务' }))
 
 		await waitFor(() => {
 			expect(screen.getByText('新的本地任务')).toBeInTheDocument()
 		})
+	})
+
+	it('选中文件后会在上传区展示真实文件名', () => {
+		render(<App />)
+
+		const file = new File(['picked-video'], 'picked-video.mov', {
+			type: 'video/quicktime',
+		})
+
+		fireEvent.change(screen.getByLabelText('选择本地视频文件'), {
+			target: {
+				files: [file],
+			},
+		})
+
+		expect(screen.getByText('picked-video.mov')).toBeInTheDocument()
 	})
 })

@@ -1,16 +1,20 @@
+import type { ChangeEvent } from 'react'
 import { FilmIcon, FilesIcon, UploadCloudIcon } from 'lucide-react'
 
 import { CreateTaskButton } from '@/components/upload/create-task-button'
 import { SourceLanguageSelector } from '@/components/upload/source-language-selector'
 import { TargetLanguageSelector } from '@/components/upload/target-language-selector'
 import { TaskOptionForm } from '@/components/upload/task-option-form'
+import { buttonVariants } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader } from '@/components/ui/card'
+import { cn } from '@/lib/utils'
 import type { LanguageOption, PendingUploadFile } from '@/types/task'
 
 type UploadPanelProps = {
 	sourceLanguageOptions: LanguageOption[]
 	targetLanguageOptions: LanguageOption[]
 	pendingFiles: PendingUploadFile[]
+	onFilesChange?: (files: File[]) => void
 	onCreateTask?: () => void
 	onShowResults?: () => void
 }
@@ -19,14 +23,20 @@ export function UploadPanel({
 	sourceLanguageOptions,
 	targetLanguageOptions,
 	pendingFiles,
+	onFilesChange,
 	onCreateTask,
 	onShowResults,
 }: UploadPanelProps) {
+	function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
+		onFilesChange?.(Array.from(event.target.files ?? []))
+		event.target.value = ''
+	}
+
 	return (
 		<Card className='h-full overflow-hidden border-border/80 bg-card/90 backdrop-blur'>
 			<CardHeader>
 				<h2 className='font-heading text-lg font-medium'>创建任务</h2>
-				<CardDescription>左侧先承载上传与参数入口，后续阶段再接入真实文件和 API 链路。</CardDescription>
+				<CardDescription>左侧现在可以选择本地视频文件，并通过上传模块把源站 URL 写回任务状态。</CardDescription>
 			</CardHeader>
 			<CardContent className='flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto'>
 				<div className='rounded-xl border border-dashed border-border bg-muted/30 p-4'>
@@ -36,25 +46,49 @@ export function UploadPanel({
 						</div>
 						<div className='flex flex-col gap-1'>
 							<p className='text-sm font-medium'>上传视频文件</p>
-							<p className='text-xs leading-5 text-muted-foreground'>阶段二只展示待上传文件列表，不触发真实上传。</p>
+							<p className='text-xs leading-5 text-muted-foreground'>选择本地视频后，创建任务会直接使用这些文件走真实上传链路。</p>
 						</div>
 					</div>
+					<div className='mt-4'>
+						<label
+							htmlFor='video-upload-input'
+							className={cn(buttonVariants({ variant: 'outline' }), 'flex w-full cursor-pointer')}>
+							<span className='sr-only'>选择本地视频文件</span>
+							<UploadCloudIcon className='size-4' />
+							选择本地视频文件
+						</label>
+						<input
+							id='video-upload-input'
+							type='file'
+							accept='video/*'
+							multiple
+							className='sr-only'
+							aria-label='选择本地视频文件'
+							onChange={handleFileChange}
+						/>
+					</div>
 					<div className='mt-4 flex flex-col gap-2'>
-						{pendingFiles.map((file) => (
-							<div
-								key={file.id}
-								className='flex items-center justify-between gap-3 rounded-lg border border-border/70 bg-background px-3 py-2'>
-								<div className='flex min-w-0 items-center gap-2'>
-									<FilmIcon className='size-4 shrink-0 text-muted-foreground' />
-									<p className='truncate text-sm font-medium'>{file.name}</p>
-								</div>
-								<p className='shrink-0 text-xs text-muted-foreground'>{file.size}</p>
-							</div>
-						))}
+						{pendingFiles.length > 0
+							? pendingFiles.map((file) => (
+									<div
+										key={file.id}
+										className='flex items-center justify-between gap-3 rounded-lg border border-border/70 bg-background px-3 py-2'>
+										<div className='flex min-w-0 items-center gap-2'>
+											<FilmIcon className='size-4 shrink-0 text-muted-foreground' />
+											<p className='truncate text-sm font-medium'>{file.name}</p>
+										</div>
+										<p className='shrink-0 text-xs text-muted-foreground'>{file.size}</p>
+									</div>
+								))
+							: (
+									<div className='rounded-lg border border-border/70 bg-background/70 px-3 py-4 text-center text-sm text-muted-foreground'>
+										暂未选择本地视频文件
+									</div>
+								)}
 					</div>
 					<div className='mt-4 flex items-center gap-2 text-xs text-muted-foreground'>
 						<FilesIcon className='size-4' />
-						<span>支持一次性选择多个视频文件，阶段九再接入完整链路。</span>
+						<span>支持一次性选择多个视频文件，创建任务后会按当前文件顺序逐个上传。</span>
 					</div>
 				</div>
 
@@ -62,6 +96,7 @@ export function UploadPanel({
 				<TargetLanguageSelector items={targetLanguageOptions} />
 				<TaskOptionForm />
 				<CreateTaskButton
+					disabled={pendingFiles.length === 0}
 					onCreateTask={onCreateTask}
 					onShowResults={onShowResults}
 				/>

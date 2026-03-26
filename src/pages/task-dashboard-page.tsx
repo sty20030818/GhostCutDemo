@@ -1,13 +1,13 @@
-import { useEffect, useMemo, useRef } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { BarChart3Icon, DatabaseIcon, SparklesIcon } from 'lucide-react'
 
 import { ResultPanel } from '@/components/result/result-panel'
 import { TaskList } from '@/components/task/task-list'
 import { UploadPanel } from '@/components/upload/upload-panel'
 import { Badge } from '@/components/ui/badge'
-import { mockTasks, pendingFiles, sourceLanguageOptions, targetLanguageOptions } from '@/pages/task-dashboard.mock'
+import { mockTasks, sourceLanguageOptions, targetLanguageOptions } from '@/pages/task-dashboard.mock'
 import { useTaskStore } from '@/store/task-store'
-import type { TaskResult, TranslateTask } from '@/types/task'
+import type { PendingUploadFile, TaskResult, TranslateTask } from '@/types/task'
 
 function buildTaskResults(tasks: TranslateTask[]): TaskResult[] {
 	return tasks.flatMap((task) =>
@@ -27,14 +27,40 @@ function buildTaskResults(tasks: TranslateTask[]): TaskResult[] {
 	)
 }
 
+function formatFileSize(size: number) {
+	if (size >= 1024 * 1024 * 1024) {
+		return `${(size / 1024 / 1024 / 1024).toFixed(2)} GB`
+	}
+
+	if (size >= 1024 * 1024) {
+		return `${(size / 1024 / 1024).toFixed(1)} MB`
+	}
+
+	if (size >= 1024) {
+		return `${Math.round(size / 1024)} KB`
+	}
+
+	return `${size} B`
+}
+
+function buildPendingUploadFiles(files: File[]): PendingUploadFile[] {
+	return files.map((file, index) => ({
+		id: `${file.name}-${index}-${file.size}`,
+		name: file.name,
+		size: formatFileSize(file.size),
+	}))
+}
+
 export function TaskDashboardPage() {
 	const resultPanelRef = useRef<HTMLDivElement | null>(null)
+	const [selectedFiles, setSelectedFiles] = useState<File[]>([])
 	const tasks = useTaskStore((state) => state.tasks)
 	const selectedTaskId = useTaskStore((state) => state.selectedTaskId)
 	const isPolling = useTaskStore((state) => state.isPolling)
 	const loadTasksFromDB = useTaskStore((state) => state.loadTasksFromDB)
 	const bootstrapDemoTasks = useTaskStore((state) => state.bootstrapDemoTasks)
 	const createLocalTask = useTaskStore((state) => state.createLocalTask)
+	const uploadTaskFiles = useTaskStore((state) => state.uploadTaskFiles)
 	const setSelectedTaskId = useTaskStore((state) => state.setSelectedTaskId)
 
 	useEffect(() => {
@@ -54,6 +80,7 @@ export function TaskDashboardPage() {
 	}, [bootstrapDemoTasks, loadTasksFromDB])
 
 	const results = useMemo(() => buildTaskResults(tasks), [tasks])
+	const pendingFiles = useMemo(() => buildPendingUploadFiles(selectedFiles), [selectedFiles])
 	const overviewItems = useMemo(
 		() => [
 			{
@@ -79,12 +106,19 @@ export function TaskDashboardPage() {
 	)
 
 	async function handleCreateTask() {
-		await createLocalTask({
+		if (selectedFiles.length === 0) {
+			return
+		}
+
+		const task = await createLocalTask({
 			taskName: '新的本地任务',
 			sourceLanguage: sourceLanguageOptions[1]?.label ?? '自动识别',
 			targetLanguage: targetLanguageOptions[2]?.label ?? 'English',
 			files: pendingFiles,
 		})
+
+		await uploadTaskFiles(task.id, selectedFiles)
+		setSelectedFiles([])
 	}
 
 	function handleShowResults() {
@@ -102,18 +136,18 @@ export function TaskDashboardPage() {
 						<div className='flex flex-col gap-3'>
 							<Badge variant='outline'>
 								<SparklesIcon data-icon='inline-start' />
-								阶段五 · 状态管理
+								阶段六 · 上传模块
 							</Badge>
 							<div className='flex flex-col gap-2'>
 								<h1 className='font-heading text-3xl font-medium tracking-tight sm:text-4xl'>GhostCut 任务工作台</h1>
 								<p className='max-w-3xl text-sm leading-6 text-muted-foreground sm:text-base'>
-									页面现在通过 Zustand 和 IndexedDB 驱动任务状态，后续阶段只需要继续接入上传、接口和轮询。
+									页面现在已经接入上传适配层，创建本地任务后会自动把演示文件串行上传并把返回 URL 写回任务状态。
 								</p>
 							</div>
 						</div>
 						<div className='flex items-center gap-2 rounded-2xl border border-border/60 bg-muted/40 px-3 py-2 text-sm text-muted-foreground'>
 							{isPolling ? <BarChart3Icon className='size-4' /> : <DatabaseIcon className='size-4' />}
-							<span>{isPolling ? '轮询状态预留中' : '当前页面由 store + IndexedDB 驱动'}</span>
+							<span>{isPolling ? '轮询状态预留中' : '当前页面由 store + IndexedDB + 上传模块驱动'}</span>
 						</div>
 					</div>
 					<div className='grid gap-3 sm:grid-cols-3'>
@@ -134,6 +168,7 @@ export function TaskDashboardPage() {
 							sourceLanguageOptions={sourceLanguageOptions}
 							targetLanguageOptions={targetLanguageOptions}
 							pendingFiles={pendingFiles}
+							onFilesChange={setSelectedFiles}
 							onCreateTask={handleCreateTask}
 							onShowResults={handleShowResults}
 						/>

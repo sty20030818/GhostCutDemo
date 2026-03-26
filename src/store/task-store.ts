@@ -2,6 +2,7 @@ import { useStore } from 'zustand'
 import { createStore } from 'zustand/vanilla'
 
 import { deleteTask, getAllTasks, saveTask, updateTask as persistTask } from '@/lib/db'
+import { uploadToTos } from '@/lib/tos'
 import type { LanguageCode, PendingUploadFile, TaskBatchStatus, TaskFile, TranslateTask } from '@/types/task'
 
 type CreateLocalTaskInput = {
@@ -12,7 +13,7 @@ type CreateLocalTaskInput = {
 }
 
 type MarkFileStatusInput = Partial<
-	Pick<TaskFile, 'status' | 'progress' | 'sourceUrl' | 'ghostcutTaskId' | 'resultUrl' | 'resultLabel' | 'error'>
+	Pick<TaskFile, 'status' | 'progress' | 'tosKey' | 'sourceUrl' | 'ghostcutTaskId' | 'resultUrl' | 'resultLabel' | 'error'>
 >
 
 export type TaskStoreState = {
@@ -24,6 +25,7 @@ export type TaskStoreState = {
 	loadTasksFromDB: () => Promise<TranslateTask[]>
 	bootstrapDemoTasks: (tasks: TranslateTask[]) => Promise<TranslateTask[]>
 	createLocalTask: (input: CreateLocalTaskInput) => Promise<TranslateTask>
+	uploadTaskFiles: (taskId: string, files: File[]) => Promise<void>
 	updateTask: (task: TranslateTask) => Promise<void>
 	removeTask: (taskId: string) => Promise<void>
 	markTaskCompleted: (taskId: string) => Promise<void>
@@ -101,6 +103,31 @@ function replaceTask(tasks: TranslateTask[], nextTask: TranslateTask) {
 	return tasks.map((task) => (task.id === nextTask.id ? nextTask : task))
 }
 
+async function updateTaskWithFilePatch(
+	get: () => TaskStoreState,
+	set: (partial: Partial<TaskStoreState> | ((state: TaskStoreState) => Partial<TaskStoreState>)) => void,
+	taskId: string,
+	fileId: string,
+	patch: MarkFileStatusInput,
+) {
+	const currentTask = get().tasks.find((task) => task.id === taskId)
+	if (!currentTask) {
+		return
+	}
+
+	const files = currentTask.files.map((file) => (file.id === fileId ? { ...file, ...patch } : file))
+	const nextTask: TranslateTask = {
+		...currentTask,
+		files,
+		status: deriveBatchStatus(files),
+	}
+
+	await persistTask(nextTask)
+	set((state) => ({
+		tasks: replaceTask(state.tasks, nextTask),
+	}))
+}
+
 export function createTaskStore(
 	initialState?: Partial<Pick<TaskStoreState, 'tasks' | 'selectedTaskId' | 'isPolling'>>,
 ) {
@@ -151,6 +178,47 @@ export function createTaskStore(
 			return task
 		},
 
+		async uploadTaskFiles(taskId, files) {
+			const currentTask = get().tasks.find((task) => task.id === taskId)
+			if (!currentTask) {
+				return
+			}
+
+			for (const [index, file] of files.entries()) {
+				const taskFile = get().tasks.find((task) => task.id === taskId)?.files[index]
+				if (!taskFile) {
+					continue
+				}
+
+				await updateTaskWithFilePatch(get, set, taskId, taskFile.id, {
+					status: 'uploading',
+					progress: 12,
+					error: undefined,
+					resultLabel: '上传中',
+				})
+
+				try {
+					const uploadResult = await uploadToTos(file)
+
+					await updateTaskWithFilePatch(get, set, taskId, taskFile.id, {
+						status: 'uploaded',
+						progress: 100,
+						sourceUrl: uploadResult.url,
+						tosKey: uploadResult.key,
+						resultLabel: '上传完成',
+					})
+				}
+				catch (error) {
+					await updateTaskWithFilePatch(get, set, taskId, taskFile.id, {
+						status: 'failed',
+						progress: 100,
+						error: error instanceof Error ? error.message : '上传失败，请稍后重试',
+						resultLabel: '上传失败',
+					})
+				}
+			}
+		},
+
 		async updateTask(task) {
 			await persistTask(task)
 			set((state) => ({
@@ -197,22 +265,7 @@ export function createTaskStore(
 		},
 
 		async markFileStatus(taskId, fileId, patch) {
-			const currentTask = get().tasks.find((task) => task.id === taskId)
-			if (!currentTask) {
-				return
-			}
-
-			const files = currentTask.files.map((file) => (file.id === fileId ? { ...file, ...patch } : file))
-			const nextTask: TranslateTask = {
-				...currentTask,
-				files,
-				status: deriveBatchStatus(files),
-			}
-
-			await persistTask(nextTask)
-			set((state) => ({
-				tasks: replaceTask(state.tasks, nextTask),
-			}))
+			await updateTaskWithFilePatch(get, set, taskId, fileId, patch)
 		},
 	}))
 }

@@ -62,4 +62,31 @@ describe('task store', () => {
 		expect(task?.status).toBe('completed')
 		expect(task?.files.every((file) => file.status === 'completed')).toBe(true)
 	})
+
+	it('可以上传本地文件并把 sourceUrl 写回任务', async () => {
+		const store = createTaskStore()
+		const files = [
+			new File(['brand-video'], 'brand-intro.mp4', { type: 'video/mp4' }),
+			new File(['feature-video'], 'feature-demo.mov', { type: 'video/quicktime' }),
+		]
+
+		const task = await store.getState().createLocalTask({
+			taskName: '上传测试任务',
+			sourceLanguage: '自动识别',
+			targetLanguage: 'English',
+			files: files.map((file, index) => ({
+				id: `pending-${index + 1}`,
+				name: file.name,
+				size: `${file.size} B`,
+			})),
+		})
+
+		await store.getState().uploadTaskFiles(task.id, files)
+		const storedTask = await getTaskById(task.id)
+
+		expect(storedTask?.status).toBe('processing')
+		expect(storedTask?.files[0]?.status).toBe('uploaded')
+		expect(storedTask?.files[0]?.sourceUrl?.startsWith('blob:')).toBe(true)
+		expect(storedTask?.files[0]?.tosKey).toContain('brand-intro.mp4')
+	})
 })
