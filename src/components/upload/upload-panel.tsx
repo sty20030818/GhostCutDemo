@@ -4,7 +4,6 @@ import { FilmIcon, FilesIcon, UploadCloudIcon } from 'lucide-react'
 import { CreateTaskButton } from '@/components/upload/create-task-button'
 import { SourceLanguageSelector } from '@/components/upload/source-language-selector'
 import { TargetLanguageSelector } from '@/components/upload/target-language-selector'
-import { TaskOptionForm } from '@/components/upload/task-option-form'
 import { buttonVariants } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader } from '@/components/ui/card'
 import { cn } from '@/lib/utils'
@@ -36,7 +35,7 @@ export function UploadPanel({
 		<Card className='h-full overflow-hidden border-border/80 bg-card/90 backdrop-blur'>
 			<CardHeader>
 				<h2 className='font-heading text-lg font-medium'>创建任务</h2>
-				<CardDescription>左侧现在可以选择本地视频文件，并通过上传模块把源站 URL 写回任务状态。</CardDescription>
+				<CardDescription>左侧负责收集本地视频与语言配置，创建后会直接走真实上传、批量提交和轮询链路。</CardDescription>
 			</CardHeader>
 			<CardContent className='flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto'>
 				<div className='rounded-xl border border-dashed border-border bg-muted/30 p-4'>
@@ -46,7 +45,7 @@ export function UploadPanel({
 						</div>
 						<div className='flex flex-col gap-1'>
 							<p className='text-sm font-medium'>上传视频文件</p>
-							<p className='text-xs leading-5 text-muted-foreground'>选择本地视频后，创建任务会直接使用这些文件走真实上传链路。</p>
+						<p className='text-xs leading-5 text-muted-foreground'>选择本地视频后，创建任务会按当前顺序上传文件并提交到 GhostCut 批量任务。</p>
 						</div>
 					</div>
 					<div className='mt-4'>
@@ -88,13 +87,12 @@ export function UploadPanel({
 					</div>
 					<div className='mt-4 flex items-center gap-2 text-xs text-muted-foreground'>
 						<FilesIcon className='size-4' />
-						<span>支持一次性选择多个视频文件，创建任务后会按当前文件顺序逐个上传。</span>
+						<span>支持一次性选择多个视频文件，上传完成后会统一提交并由全局轮询器持续跟踪结果。</span>
 					</div>
 				</div>
 
 				<SourceLanguageSelector items={sourceLanguageOptions} />
 				<TargetLanguageSelector items={targetLanguageOptions} />
-				<TaskOptionForm />
 				<CreateTaskButton
 					disabled={pendingFiles.length === 0}
 					onCreateTask={onCreateTask}

@@ -75,10 +75,29 @@ export type TaskResult = {
 	taskName: string
 	fileId?: string
 	fileName: string
+	sourceLanguage?: LanguageCode
 	targetLanguage: LanguageCode
 	finishedAt: string
 	format: string
 	downloadUrl?: string
+	sourceVideoUrl?: string
+	srcSrtUrl?: string
+	tgtSrtUrl?: string
+	ocrTranslateTaskId?: string
+}
+
+export type TaskResultGroup = {
+	id: string
+	taskName: string
+	createdAt: string
+	sourceLanguage: LanguageCode
+	targetLanguage: LanguageCode
+	status: TaskBatchStatus
+	totalCount: number
+	completedCount: number
+	failedCount: number
+	processingCount: number
+	results: TaskResult[]
 }
 
 // 第四阶段接 Dexie 时，先以当前任务模型作为持久化结构的单一事实来源。

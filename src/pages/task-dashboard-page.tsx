@@ -9,25 +9,7 @@ import { UploadPanel } from '@/components/upload/upload-panel'
 import { Badge } from '@/components/ui/badge'
 import { mockTasks, sourceLanguageOptions, targetLanguageOptions } from '@/pages/task-dashboard.mock'
 import { taskStore, useTaskStore } from '@/store/task-store'
-import type { PendingUploadFile, TaskResult, TranslateTask } from '@/types/task'
-
-function buildTaskResults(tasks: TranslateTask[]): TaskResult[] {
-	return tasks.flatMap((task) =>
-		task.files
-			.filter((file) => file.status === 'completed')
-			.map((file) => ({
-				id: `${task.id}-${file.id}`,
-				taskId: task.id,
-				taskName: task.name,
-				fileId: file.id,
-				fileName: file.name,
-				targetLanguage: task.targetLanguage,
-				finishedAt: task.createdAt,
-				format: 'MP4 / 内嵌字幕',
-				downloadUrl: file.resultUrl,
-			})),
-	)
-}
+import type { PendingUploadFile, TranslateTask } from '@/types/task'
 
 function formatFileSize(size: number) {
 	if (size >= 1024 * 1024 * 1024) {
@@ -89,7 +71,10 @@ export function TaskDashboardPage() {
 		}
 	}, [bootstrapDemoTasks, loadTasksFromDB, startPolling])
 
-	const results = useMemo(() => buildTaskResults(tasks), [tasks])
+	const completedResultsCount = useMemo(
+		() => tasks.flatMap((task) => task.files).filter((file) => file.status === 'completed').length,
+		[tasks],
+	)
 	const pendingFiles = useMemo(() => buildPendingUploadFiles(selectedFiles), [selectedFiles])
 	const overviewItems = useMemo(
 		() => [
@@ -102,7 +87,7 @@ export function TaskDashboardPage() {
 			},
 			{
 				label: '已完成结果',
-				value: String(results.length).padStart(2, '0'),
+				value: String(completedResultsCount).padStart(2, '0'),
 			},
 			{
 				label: '待上传文件',
@@ -112,7 +97,7 @@ export function TaskDashboardPage() {
 				),
 			},
 		],
-		[results.length, tasks],
+		[completedResultsCount, tasks],
 	)
 
 	async function handleCreateTask() {
@@ -144,19 +129,19 @@ export function TaskDashboardPage() {
 	}
 
 	return (
-		<div className='min-h-svh bg-[radial-gradient(circle_at_top,_rgba(255,255,255,0.92),_transparent_38%),linear-gradient(180deg,_rgba(241,245,249,0.95),_rgba(248,250,252,1))] px-2 py-2 text-foreground sm:px-3 sm:py-3 xl:px-4 xl:py-4'>
-			<div className='flex w-full flex-col gap-3'>
+		<div className='h-svh overflow-hidden bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.92),transparent_38%),linear-gradient(180deg,rgba(241,245,249,0.95),rgba(248,250,252,1))] px-2 py-2 text-foreground sm:px-3 sm:py-3 xl:px-4 xl:py-4'>
+			<div className='flex h-full w-full flex-col gap-3'>
 				<header className='flex flex-col gap-3 rounded-[1.75rem] border border-border/70 bg-background/85 p-4 shadow-sm backdrop-blur sm:p-5'>
 					<div className='flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between'>
 						<div className='flex flex-col gap-3'>
 							<Badge variant='outline'>
 								<SparklesIcon data-icon='inline-start' />
-								阶段八 · 调度与轮询
+								阶段九 · 完整链路联调
 							</Badge>
 							<div className='flex flex-col gap-2'>
 								<h1 className='font-heading text-3xl font-medium tracking-tight sm:text-4xl'>GhostCut 任务工作台</h1>
 								<p className='max-w-3xl text-sm leading-6 text-muted-foreground sm:text-base'>
-									页面现在会在创建任务后顺序执行上传与提交，并对处理中任务启动统一轮询，刷新后也能继续恢复。
+									页面现在已经把上传、批量提交、统一轮询和结果分组展示串成完整链路，刷新后也能继续恢复处理中任务。
 								</p>
 							</div>
 						</div>
@@ -177,7 +162,7 @@ export function TaskDashboardPage() {
 					</div>
 				</header>
 
-				<div className='grid min-h-[calc(100svh-14rem)] gap-3 lg:grid-cols-2 xl:h-[calc(100svh-12.5rem)] xl:grid-cols-[minmax(0,1fr)_minmax(0,2fr)_minmax(0,1fr)]'>
+				<div className='grid min-h-0 flex-1 gap-3 lg:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_minmax(0,2fr)_minmax(0,1fr)]'>
 					<div className='min-h-0 lg:col-span-2 xl:col-span-1'>
 						<UploadPanel
 							sourceLanguageOptions={sourceLanguageOptions}
@@ -198,7 +183,7 @@ export function TaskDashboardPage() {
 					<div
 						ref={resultPanelRef}
 						className='min-h-0 min-w-0'>
-						<ResultPanel results={results} />
+						<ResultPanel tasks={tasks} />
 					</div>
 				</div>
 			</div>

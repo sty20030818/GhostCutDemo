@@ -26,9 +26,9 @@ export function TaskOptionForm() {
 			<div className='flex items-center justify-between gap-3'>
 				<div className='flex flex-col gap-1'>
 					<p className='text-sm font-medium'>任务选项</p>
-					<p className='text-xs text-muted-foreground'>阶段二只保留结构和信息层级，不接真实表单状态。</p>
+					<p className='text-xs text-muted-foreground'>当前仍保留轻量选项结构，后续阶段再继续接更细的 4.1.1.4 业务参数。</p>
 				</div>
-				<Badge variant='outline'>Mock</Badge>
+				<Badge variant='outline'>阶段九</Badge>
 			</div>
 			<div className='flex flex-col gap-2'>
 				{taskOptions.map((option) => {
