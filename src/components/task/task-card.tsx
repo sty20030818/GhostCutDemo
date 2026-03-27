@@ -5,6 +5,7 @@ import { shortTaskId } from '@/lib/short-id'
 import { TaskFileItem } from '@/components/task/task-file-item'
 import { TaskStatusBadge } from '@/components/task/task-status-badge'
 import { Card, CardAction, CardContent, CardHeader } from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
 import type { TranslateTask } from '@/types/task'
 import { getTaskDisplayStatus } from '@/lib/task-display-status'
 
@@ -12,9 +13,21 @@ type TaskCardProps = {
 	task: TranslateTask
 	isSelected?: boolean
 	onSelect?: () => void
+	onContinue?: () => void
+	onCancel?: () => void
+	isActionLoading?: boolean
 }
 
-export function TaskCard({ task, isSelected = false, onSelect }: TaskCardProps) {
+export function TaskCard({
+	task,
+	isSelected = false,
+	onSelect,
+	onContinue,
+	onCancel,
+	isActionLoading = false,
+}: TaskCardProps) {
+	const canShowActions = task.files.some((file) => file.status === 'uploaded')
+
 	return (
 		<Card
 			className={`overflow-visible border-border/80 bg-card/95 transition-all ${isSelected ? 'ring-2 ring-primary/30' : ''}`}
@@ -44,6 +57,31 @@ export function TaskCard({ task, isSelected = false, onSelect }: TaskCardProps) 
 						file={file}
 					/>
 				))}
+				{canShowActions ? (
+					<div className='flex items-center justify-end gap-2 border-t border-border/70 pt-3'>
+						<Button
+							type='button'
+							size='sm'
+							variant='outline'
+							disabled={isActionLoading}
+							onClick={(event) => {
+								event.stopPropagation()
+								onCancel?.()
+							}}>
+							取消
+						</Button>
+						<Button
+							type='button'
+							size='sm'
+							disabled={isActionLoading}
+							onClick={(event) => {
+								event.stopPropagation()
+								onContinue?.()
+							}}>
+							继续
+						</Button>
+					</div>
+				) : null}
 			</CardContent>
 		</Card>
 	)

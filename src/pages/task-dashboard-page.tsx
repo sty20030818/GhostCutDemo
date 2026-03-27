@@ -1,8 +1,8 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 
 import { useTaskPolling } from '@/hooks/use-task-polling'
 import { formatDuration, probeVideoDuration } from '@/lib/probe-duration'
-import { runTaskBatch } from '@/lib/task-runner'
+import { runTaskBatch, submitUploadedFilesForTask } from '@/lib/task-runner'
 import { ResultPanel } from '@/components/result/result-panel'
 import { TaskList } from '@/components/task/task-list'
 import { UploadPanel } from '@/components/upload/upload-panel'
@@ -40,12 +40,12 @@ function hasPollingCandidates(tasks: TranslateTask[]) {
 }
 
 export function TaskDashboardPage() {
-	const resultPanelRef = useRef<HTMLDivElement | null>(null)
 	const [selectedFiles, setSelectedFiles] = useState<File[]>([])
 	const [durationMap, setDurationMap] = useState<Map<File, string>>(() => new Map())
 	const [sourceLanguage, setSourceLanguage] = useState('auto')
 	const [targetLanguage, setTargetLanguage] = useState('en')
 	const [isCreatingTask, setIsCreatingTask] = useState(false)
+	const [actionLoadingTaskId, setActionLoadingTaskId] = useState<string | null>(null)
 	const { start: startPolling } = useTaskPolling()
 	const tasks = useTaskStore((state) => state.tasks)
 	const selectedTaskId = useTaskStore((state) => state.selectedTaskId)
@@ -134,6 +134,7 @@ export function TaskDashboardPage() {
 				store: taskStore,
 				taskId: task.id,
 				files: selectedFiles,
+				autoSubmit: false,
 			})
 			startPolling()
 			setSelectedFiles([])
@@ -144,11 +145,49 @@ export function TaskDashboardPage() {
 		}
 	}
 
-	function handleShowResults() {
-		resultPanelRef.current?.scrollIntoView({
-			behavior: 'smooth',
-			block: 'start',
-		})
+	async function handleContinueTask(taskId: string) {
+		if (actionLoadingTaskId) {
+			return
+		}
+
+		setActionLoadingTaskId(taskId)
+		try {
+			await submitUploadedFilesForTask({
+				store: taskStore,
+				taskId,
+			})
+			startPolling()
+		}
+		finally {
+			setActionLoadingTaskId(null)
+		}
+	}
+
+	async function handleCancelTask(taskId: string) {
+		if (actionLoadingTaskId) {
+			return
+		}
+
+		const task = tasks.find((item) => item.id === taskId)
+		if (!task) {
+			return
+		}
+
+		setActionLoadingTaskId(taskId)
+		try {
+			const uploadedFiles = task.files.filter((file) => file.status === 'uploaded')
+			for (const file of uploadedFiles) {
+				await taskStore.getState().markFileStatus(taskId, file.id, {
+					status: 'failed',
+					progress: 100,
+					error: '用户已取消后续提交',
+					resultLabel: '已取消',
+				})
+			}
+		}
+		finally {
+			setActionLoadingTaskId(null)
+		}
 	}
 
 	return (
@@ -190,7 +229,6 @@ export function TaskDashboardPage() {
 							onRemoveFile={(index) => setSelectedFiles((prev) => prev.filter((_, i) => i !== index))}
 							onCreateTask={handleCreateTask}
 							isCreating={isCreatingTask}
-							onShowResults={handleShowResults}
 						/>
 					</div>
 					<div className='min-h-0 min-w-0'>
@@ -198,11 +236,12 @@ export function TaskDashboardPage() {
 							tasks={tasks}
 							selectedTaskId={selectedTaskId}
 							onSelectTask={setSelectedTaskId}
+							onContinueTask={handleContinueTask}
+							onCancelTask={handleCancelTask}
+							actionLoadingTaskId={actionLoadingTaskId}
 						/>
 					</div>
-					<div
-						ref={resultPanelRef}
-						className='min-h-0 min-w-0'>
+					<div className='min-h-0 min-w-0'>
 						<ResultPanel tasks={tasks} />
 					</div>
 				</div>

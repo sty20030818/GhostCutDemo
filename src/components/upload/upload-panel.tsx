@@ -20,7 +20,6 @@ type UploadPanelProps = {
 	onFilesChange?: (files: File[]) => void
 	onRemoveFile?: (index: number) => void
 	onCreateTask?: () => void
-	onShowResults?: () => void
 	isCreating?: boolean
 }
 
@@ -35,7 +34,6 @@ export function UploadPanel({
 	onFilesChange,
 	onRemoveFile,
 	onCreateTask,
-	onShowResults,
 	isCreating,
 }: UploadPanelProps) {
 	function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
@@ -126,7 +124,6 @@ export function UploadPanel({
 					disabled={pendingFiles.length === 0}
 					isCreating={isCreating}
 					onCreateTask={onCreateTask}
-					onShowResults={onShowResults}
 				/>
 			</CardContent>
 		</Card>

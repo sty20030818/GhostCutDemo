@@ -8,9 +8,19 @@ type TaskListProps = {
 	tasks: TranslateTask[]
 	selectedTaskId?: string | null
 	onSelectTask?: (taskId: string) => void
+	onContinueTask?: (taskId: string) => void
+	onCancelTask?: (taskId: string) => void
+	actionLoadingTaskId?: string | null
 }
 
-export function TaskList({ tasks, selectedTaskId = null, onSelectTask }: TaskListProps) {
+export function TaskList({
+	tasks,
+	selectedTaskId = null,
+	onSelectTask,
+	onContinueTask,
+	onCancelTask,
+	actionLoadingTaskId = null,
+}: TaskListProps) {
 	return (
 		<Card className='h-full overflow-hidden border-border/80 bg-card/90 backdrop-blur'>
 			<CardHeader>
@@ -34,6 +44,9 @@ export function TaskList({ tasks, selectedTaskId = null, onSelectTask }: TaskLis
 						task={task}
 						isSelected={selectedTaskId === task.id}
 						onSelect={() => onSelectTask?.(task.id)}
+						onContinue={() => onContinueTask?.(task.id)}
+						onCancel={() => onCancelTask?.(task.id)}
+						isActionLoading={actionLoadingTaskId === task.id}
 					/>
 				))}
 			</CardContent>

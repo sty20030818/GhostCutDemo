@@ -2,16 +2,16 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { uploadToTos } from '@/lib/tos'
 
-const { putObjectMock, tosClientMock } = vi.hoisted(() => {
-	const putObjectMock = vi.fn()
+const { uploadFileMock, tosClientMock } = vi.hoisted(() => {
+	const uploadFileMock = vi.fn()
 	const tosClientMock = vi.fn(function TosClientMock() {
 		return {
-			putObject: putObjectMock,
+			uploadFile: uploadFileMock,
 		}
 	})
 
 	return {
-		putObjectMock,
+		uploadFileMock,
 		tosClientMock,
 	}
 })
@@ -23,7 +23,7 @@ vi.mock('@volcengine/tos-sdk', () => ({
 describe('tos upload', () => {
 	afterEach(() => {
 		vi.unstubAllEnvs()
-		putObjectMock.mockReset()
+		uploadFileMock.mockReset()
 		tosClientMock.mockClear()
 	})
 
@@ -41,7 +41,7 @@ describe('tos upload', () => {
 		vi.stubEnv('VITE_TOS_REGION', 'cn-shanghai')
 		vi.stubEnv('VITE_TOS_ENDPOINT', 'tos-cn-shanghai.volces.com')
 		vi.stubEnv('VITE_TOS_BUCKET', 'ghostcut')
-		putObjectMock.mockResolvedValue({})
+		uploadFileMock.mockResolvedValue({})
 
 		const file = new File(['video-content'], 'intro.mp4', {
 			type: 'video/mp4',
@@ -55,10 +55,10 @@ describe('tos upload', () => {
 			region: 'cn-shanghai',
 			endpoint: 'tos-cn-shanghai.volces.com',
 		})
-		expect(putObjectMock).toHaveBeenCalledWith(
+		expect(uploadFileMock).toHaveBeenCalledWith(
 			expect.objectContaining({
 				bucket: 'ghostcut',
-				body: file,
+				file,
 				contentType: 'video/mp4',
 			}),
 		)

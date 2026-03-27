@@ -7,6 +7,7 @@ type RunTaskBatchInput = {
 	store: TaskStoreApi
 	taskId: string
 	files: File[]
+	autoSubmit?: boolean
 }
 
 function getTaskFileByIndex(store: TaskStoreApi, taskId: string, index: number) {
@@ -41,57 +42,9 @@ type UploadedTaskFile = {
 	tosKey: string
 }
 
-export async function runTaskBatch({ store, taskId, files }: RunTaskBatchInput) {
-	const uploadedTaskFiles: UploadedTaskFile[] = []
+async function submitUploadedTaskFiles(store: TaskStoreApi, taskId: string, uploadedTaskFiles: UploadedTaskFile[]) {
 	const taskLanguages = getTaskLanguages(store, taskId)
-
 	if (!taskLanguages) {
-		return
-	}
-
-	for (const [index, file] of files.entries()) {
-		const taskFile = getTaskFileByIndex(store, taskId, index)
-
-		if (!taskFile) {
-			continue
-		}
-
-		try {
-			await store.getState().markFileStatus(taskId, taskFile.id, {
-				status: 'uploading',
-				progress: 12,
-				error: undefined,
-				resultLabel: '上传中',
-			})
-
-			const uploadResult = await uploadToTos(file)
-
-			await store.getState().markFileStatus(taskId, taskFile.id, {
-				status: 'uploaded',
-				progress: 100,
-				sourceUrl: uploadResult.url,
-				tosKey: uploadResult.key,
-				error: undefined,
-				resultLabel: '上传完成',
-			})
-			uploadedTaskFiles.push({
-				fileId: taskFile.id,
-				name: file.name,
-				sourceUrl: uploadResult.url,
-				tosKey: uploadResult.key,
-			})
-		}
-		catch (error) {
-			await store.getState().markFileStatus(taskId, taskFile.id, {
-				status: 'failed',
-				progress: 100,
-				error: getErrorMessage(error),
-				resultLabel: '处理失败',
-			})
-		}
-	}
-
-	if (uploadedTaskFiles.length === 0) {
 		return
 	}
 
@@ -147,4 +100,105 @@ export async function runTaskBatch({ store, taskId, files }: RunTaskBatchInput) 
 			})
 		}
 	}
+}
+
+export async function submitUploadedFilesForTask({ store, taskId }: Pick<RunTaskBatchInput, 'store' | 'taskId'>) {
+	const task = store.getState().tasks.find((item) => item.id === taskId)
+	if (!task) {
+		return
+	}
+
+	const uploadedTaskFiles = task.files
+		.filter((file) => file.status === 'uploaded' && file.sourceUrl && file.tosKey)
+		.map((file) => ({
+			fileId: file.id,
+			name: file.name,
+			sourceUrl: file.sourceUrl as string,
+			tosKey: file.tosKey as string,
+		}))
+
+	if (uploadedTaskFiles.length === 0) {
+		return
+	}
+
+	await submitUploadedTaskFiles(store, taskId, uploadedTaskFiles)
+}
+
+export async function runTaskBatch({ store, taskId, files, autoSubmit = true }: RunTaskBatchInput) {
+	const uploadedTaskFiles: UploadedTaskFile[] = []
+	const progressState = new Map<string, { percent: number; timestamp: number }>()
+
+	for (const [index, file] of files.entries()) {
+		const taskFile = getTaskFileByIndex(store, taskId, index)
+
+		if (!taskFile) {
+			continue
+		}
+
+		try {
+			await store.getState().markFileStatus(taskId, taskFile.id, {
+				status: 'uploading',
+				progress: 0,
+				error: undefined,
+				resultLabel: '上传中 0%',
+			})
+
+			const uploadResult = await uploadToTos(file, {
+				onProgress: (percent) => {
+					const nextPercent = Math.max(0, Math.min(99, Math.round(percent * 100)))
+					const prev = progressState.get(taskFile.id)
+					const now = Date.now()
+					const shouldSkip = !!prev && nextPercent <= prev.percent && now - prev.timestamp < 400
+
+					if (shouldSkip) {
+						return
+					}
+
+					progressState.set(taskFile.id, {
+						percent: nextPercent,
+						timestamp: now,
+					})
+
+					void store.getState().markFileStatus(taskId, taskFile.id, {
+						status: 'uploading',
+						progress: nextPercent,
+						resultLabel: `上传中 ${nextPercent}%`,
+					})
+				},
+			})
+
+			await store.getState().markFileStatus(taskId, taskFile.id, {
+				status: 'uploaded',
+				progress: 100,
+				sourceUrl: uploadResult.url,
+				tosKey: uploadResult.key,
+				error: undefined,
+				resultLabel: '上传完成',
+			})
+			uploadedTaskFiles.push({
+				fileId: taskFile.id,
+				name: file.name,
+				sourceUrl: uploadResult.url,
+				tosKey: uploadResult.key,
+			})
+		}
+		catch (error) {
+			await store.getState().markFileStatus(taskId, taskFile.id, {
+				status: 'failed',
+				progress: 100,
+				error: getErrorMessage(error),
+				resultLabel: '处理失败',
+			})
+		}
+	}
+
+	if (uploadedTaskFiles.length === 0) {
+		return
+	}
+
+	if (!autoSubmit) {
+		return
+	}
+
+	await submitUploadedTaskFiles(store, taskId, uploadedTaskFiles)
 }
