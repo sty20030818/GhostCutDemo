@@ -13,8 +13,7 @@ type TaskCardProps = {
 	task: TranslateTask
 	isSelected?: boolean
 	onSelect?: () => void
-	onContinue?: () => void
-	onCancel?: () => void
+	onRetryFailedUpload?: () => void
 	isActionLoading?: boolean
 }
 
@@ -22,11 +21,10 @@ export function TaskCard({
 	task,
 	isSelected = false,
 	onSelect,
-	onContinue,
-	onCancel,
+	onRetryFailedUpload,
 	isActionLoading = false,
 }: TaskCardProps) {
-	const canShowActions = task.files.some((file) => file.status === 'uploaded')
+	const canRetryFailedUpload = task.files.some((file) => file.status === 'failed' && !file.sourceUrl)
 
 	return (
 		<Card
@@ -47,7 +45,10 @@ export function TaskCard({
 					</span>
 				</div>
 				<CardAction>
-					<TaskStatusBadge status={getTaskDisplayStatus(task)} />
+					<TaskStatusBadge
+						status={getTaskDisplayStatus(task)}
+						size='lg'
+					/>
 				</CardAction>
 			</CardHeader>
 			<CardContent className='flex flex-col gap-3'>
@@ -57,28 +58,17 @@ export function TaskCard({
 						file={file}
 					/>
 				))}
-				{canShowActions ? (
+				{canRetryFailedUpload ? (
 					<div className='flex items-center justify-end gap-2 border-t border-border/70 pt-3'>
 						<Button
 							type='button'
 							size='sm'
-							variant='outline'
 							disabled={isActionLoading}
 							onClick={(event) => {
 								event.stopPropagation()
-								onCancel?.()
+								onRetryFailedUpload?.()
 							}}>
-							取消
-						</Button>
-						<Button
-							type='button'
-							size='sm'
-							disabled={isActionLoading}
-							onClick={(event) => {
-								event.stopPropagation()
-								onContinue?.()
-							}}>
-							继续
+							重试上传
 						</Button>
 					</div>
 				) : null}

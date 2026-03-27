@@ -5,6 +5,7 @@ import type { TaskStatus } from '@/types/task'
 
 type TaskStatusBadgeProps = {
 	status: TaskStatus
+	size?: 'default' | 'lg'
 }
 
 const statusConfig = {
@@ -60,12 +61,15 @@ const statusConfig = {
 	},
 }
 
-export function TaskStatusBadge({ status }: TaskStatusBadgeProps) {
+export function TaskStatusBadge({ status, size = 'default' }: TaskStatusBadgeProps) {
 	const { icon: Icon, label, variant } = statusConfig[status]
 	const shouldSpin = status === 'uploading' || status === 'submitting' || status === 'processing'
+	const badgeSizeClass = size === 'lg' ? 'h-6 px-2.5 text-sm [&>svg]:size-3.5!' : undefined
 
 	return (
-		<Badge variant={variant}>
+		<Badge
+			variant={variant}
+			className={badgeSizeClass}>
 			<Icon data-icon='inline-start' className={shouldSpin ? 'animate-spin' : undefined} />
 			{label}
 		</Badge>

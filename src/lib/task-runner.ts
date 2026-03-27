@@ -124,6 +124,83 @@ export async function submitUploadedFilesForTask({ store, taskId }: Pick<RunTask
 	await submitUploadedTaskFiles(store, taskId, uploadedTaskFiles)
 }
 
+export async function retryFailedUploadsForTask({ store, taskId, files }: RunTaskBatchInput) {
+	const uploadedTaskFiles: UploadedTaskFile[] = []
+	const progressState = new Map<string, { percent: number; timestamp: number }>()
+
+	for (const [index, file] of files.entries()) {
+		const taskFile = getTaskFileByIndex(store, taskId, index)
+		if (!taskFile) {
+			continue
+		}
+
+		// 仅重试“上传阶段失败”的文件；已经有 sourceUrl 的失败通常是后续处理失败。
+		if (taskFile.status !== 'failed' || taskFile.sourceUrl) {
+			continue
+		}
+
+		try {
+			await store.getState().markFileStatus(taskId, taskFile.id, {
+				status: 'uploading',
+				progress: 0,
+				error: undefined,
+				resultLabel: '上传重试中 0%',
+			})
+
+			const uploadResult = await uploadToTos(file, {
+				onProgress: (percent) => {
+					const nextPercent = Math.max(0, Math.min(99, Math.round(percent * 100)))
+					const prev = progressState.get(taskFile.id)
+					const now = Date.now()
+					const shouldSkip = !!prev && nextPercent <= prev.percent && now - prev.timestamp < 400
+					if (shouldSkip) return
+
+					progressState.set(taskFile.id, {
+						percent: nextPercent,
+						timestamp: now,
+					})
+
+					void store.getState().markFileStatus(taskId, taskFile.id, {
+						status: 'uploading',
+						progress: nextPercent,
+						resultLabel: `上传重试中 ${nextPercent}%`,
+					})
+				},
+			})
+
+			await store.getState().markFileStatus(taskId, taskFile.id, {
+				status: 'uploaded',
+				progress: 100,
+				sourceUrl: uploadResult.url,
+				tosKey: uploadResult.key,
+				error: undefined,
+				resultLabel: '上传完成',
+			})
+
+			uploadedTaskFiles.push({
+				fileId: taskFile.id,
+				name: file.name,
+				sourceUrl: uploadResult.url,
+				tosKey: uploadResult.key,
+			})
+		}
+		catch (error) {
+			await store.getState().markFileStatus(taskId, taskFile.id, {
+				status: 'failed',
+				progress: 100,
+				error: getErrorMessage(error),
+				resultLabel: '上传失败',
+			})
+		}
+	}
+
+	if (uploadedTaskFiles.length === 0) {
+		return
+	}
+
+	await submitUploadedTaskFiles(store, taskId, uploadedTaskFiles)
+}
+
 export async function runTaskBatch({ store, taskId, files, autoSubmit = true }: RunTaskBatchInput) {
 	const uploadedTaskFiles: UploadedTaskFile[] = []
 	const progressState = new Map<string, { percent: number; timestamp: number }>()

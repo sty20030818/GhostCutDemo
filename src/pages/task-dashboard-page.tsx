@@ -1,8 +1,8 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 
 import { useTaskPolling } from '@/hooks/use-task-polling'
 import { formatDuration, probeVideoDuration } from '@/lib/probe-duration'
-import { runTaskBatch, submitUploadedFilesForTask } from '@/lib/task-runner'
+import { retryFailedUploadsForTask, runTaskBatch } from '@/lib/task-runner'
 import { ResultPanel } from '@/components/result/result-panel'
 import { TaskList } from '@/components/task/task-list'
 import { UploadPanel } from '@/components/upload/upload-panel'
@@ -46,6 +46,7 @@ export function TaskDashboardPage() {
 	const [targetLanguage, setTargetLanguage] = useState('en')
 	const [isCreatingTask, setIsCreatingTask] = useState(false)
 	const [actionLoadingTaskId, setActionLoadingTaskId] = useState<string | null>(null)
+	const taskSourceFilesRef = useRef<Map<string, File[]>>(new Map())
 	const { start: startPolling } = useTaskPolling()
 	const tasks = useTaskStore((state) => state.tasks)
 	const selectedTaskId = useTaskStore((state) => state.selectedTaskId)
@@ -134,8 +135,8 @@ export function TaskDashboardPage() {
 				store: taskStore,
 				taskId: task.id,
 				files: selectedFiles,
-				autoSubmit: false,
 			})
+			taskSourceFilesRef.current.set(task.id, [...selectedFiles])
 			startPolling()
 			setSelectedFiles([])
 			setDurationMap(new Map())
@@ -145,45 +146,24 @@ export function TaskDashboardPage() {
 		}
 	}
 
-	async function handleContinueTask(taskId: string) {
+	async function handleRetryFailedUploadTask(taskId: string) {
 		if (actionLoadingTaskId) {
+			return
+		}
+
+		const sourceFiles = taskSourceFilesRef.current.get(taskId)
+		if (!sourceFiles || sourceFiles.length === 0) {
 			return
 		}
 
 		setActionLoadingTaskId(taskId)
 		try {
-			await submitUploadedFilesForTask({
+			await retryFailedUploadsForTask({
 				store: taskStore,
 				taskId,
+				files: sourceFiles,
 			})
 			startPolling()
-		}
-		finally {
-			setActionLoadingTaskId(null)
-		}
-	}
-
-	async function handleCancelTask(taskId: string) {
-		if (actionLoadingTaskId) {
-			return
-		}
-
-		const task = tasks.find((item) => item.id === taskId)
-		if (!task) {
-			return
-		}
-
-		setActionLoadingTaskId(taskId)
-		try {
-			const uploadedFiles = task.files.filter((file) => file.status === 'uploaded')
-			for (const file of uploadedFiles) {
-				await taskStore.getState().markFileStatus(taskId, file.id, {
-					status: 'failed',
-					progress: 100,
-					error: '用户已取消后续提交',
-					resultLabel: '已取消',
-				})
-			}
 		}
 		finally {
 			setActionLoadingTaskId(null)
@@ -236,8 +216,7 @@ export function TaskDashboardPage() {
 							tasks={tasks}
 							selectedTaskId={selectedTaskId}
 							onSelectTask={setSelectedTaskId}
-							onContinueTask={handleContinueTask}
-							onCancelTask={handleCancelTask}
+							onRetryFailedUploadTask={handleRetryFailedUploadTask}
 							actionLoadingTaskId={actionLoadingTaskId}
 						/>
 					</div>

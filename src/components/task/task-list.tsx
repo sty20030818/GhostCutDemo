@@ -8,8 +8,7 @@ type TaskListProps = {
 	tasks: TranslateTask[]
 	selectedTaskId?: string | null
 	onSelectTask?: (taskId: string) => void
-	onContinueTask?: (taskId: string) => void
-	onCancelTask?: (taskId: string) => void
+	onRetryFailedUploadTask?: (taskId: string) => void
 	actionLoadingTaskId?: string | null
 }
 
@@ -17,8 +16,7 @@ export function TaskList({
 	tasks,
 	selectedTaskId = null,
 	onSelectTask,
-	onContinueTask,
-	onCancelTask,
+	onRetryFailedUploadTask,
 	actionLoadingTaskId = null,
 }: TaskListProps) {
 	return (
@@ -44,8 +42,7 @@ export function TaskList({
 						task={task}
 						isSelected={selectedTaskId === task.id}
 						onSelect={() => onSelectTask?.(task.id)}
-						onContinue={() => onContinueTask?.(task.id)}
-						onCancel={() => onCancelTask?.(task.id)}
+						onRetryFailedUpload={() => onRetryFailedUploadTask?.(task.id)}
 						isActionLoading={actionLoadingTaskId === task.id}
 					/>
 				))}

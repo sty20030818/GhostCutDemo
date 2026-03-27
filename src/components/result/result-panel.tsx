@@ -87,7 +87,10 @@ export function ResultPanel({ tasks }: ResultPanelProps) {
 										{getLanguageLabel(group.sourceLanguage)} → {getLanguageLabel(group.targetLanguage)}
 									</p>
 								</div>
-								<TaskStatusBadge status={group.status} />
+								<TaskStatusBadge
+									status={group.status}
+									size='lg'
+								/>
 							</div>
 							<div className='grid grid-cols-2 gap-2 text-xs text-muted-foreground xl:grid-cols-4'>
 								<div className='rounded-lg border border-border/70 bg-muted/40 px-3 py-2'>
