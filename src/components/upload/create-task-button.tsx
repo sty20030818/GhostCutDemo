@@ -1,4 +1,4 @@
-import { ArrowRightIcon, UploadIcon } from 'lucide-react'
+import { ArrowRightIcon, LoaderCircleIcon, UploadIcon } from 'lucide-react'
 
 import { Button } from '@/components/ui/button'
 
@@ -6,17 +6,20 @@ type CreateTaskButtonProps = {
 	onCreateTask?: () => void
 	onShowResults?: () => void
 	disabled?: boolean
+	isCreating?: boolean
 }
 
-export function CreateTaskButton({ onCreateTask, onShowResults, disabled }: CreateTaskButtonProps) {
+export function CreateTaskButton({ onCreateTask, onShowResults, disabled, isCreating }: CreateTaskButtonProps) {
 	return (
 		<div className='flex flex-col gap-2 sm:flex-row'>
 			<Button
 				className='sm:flex-1'
-				disabled={disabled}
+				disabled={disabled || isCreating}
 				onClick={onCreateTask}>
-				<UploadIcon data-icon='inline-start' />
-				创建任务
+				{isCreating
+					? <LoaderCircleIcon data-icon='inline-start' className='animate-spin' />
+					: <UploadIcon data-icon='inline-start' />}
+				{isCreating ? '上传中...' : '创建任务'}
 			</Button>
 			<Button
 				variant='outline'

@@ -45,6 +45,7 @@ export function TaskDashboardPage() {
 	const [durationMap, setDurationMap] = useState<Map<File, string>>(() => new Map())
 	const [sourceLanguage, setSourceLanguage] = useState('auto')
 	const [targetLanguage, setTargetLanguage] = useState('en')
+	const [isCreatingTask, setIsCreatingTask] = useState(false)
 	const { start: startPolling } = useTaskPolling()
 	const tasks = useTaskStore((state) => state.tasks)
 	const selectedTaskId = useTaskStore((state) => state.selectedTaskId)
@@ -116,25 +117,31 @@ export function TaskDashboardPage() {
 	)
 
 	async function handleCreateTask() {
-		if (selectedFiles.length === 0) {
+		if (selectedFiles.length === 0 || isCreatingTask) {
 			return
 		}
+		setIsCreatingTask(true)
 
-		const task = await createLocalTask({
-			taskName: '新的本地任务',
-			sourceLanguage,
-			targetLanguage,
-			files: pendingFiles,
-		})
+		try {
+			const task = await createLocalTask({
+				taskName: '新的本地任务',
+				sourceLanguage,
+				targetLanguage,
+				files: pendingFiles,
+			})
 
-		await runTaskBatch({
-			store: taskStore,
-			taskId: task.id,
-			files: selectedFiles,
-		})
-		startPolling()
-		setSelectedFiles([])
-		setDurationMap(new Map())
+			await runTaskBatch({
+				store: taskStore,
+				taskId: task.id,
+				files: selectedFiles,
+			})
+			startPolling()
+			setSelectedFiles([])
+			setDurationMap(new Map())
+		}
+		finally {
+			setIsCreatingTask(false)
+		}
 	}
 
 	function handleShowResults() {
@@ -149,7 +156,7 @@ export function TaskDashboardPage() {
 			<div className='flex h-full w-full flex-col gap-3'>
 				<header className='flex items-center justify-between gap-4 rounded-[1.75rem] border border-border/70 bg-background/85 px-4 py-3 shadow-sm backdrop-blur sm:px-5'>
 					<div className='flex flex-col gap-1'>
-						<h1 className='font-heading text-xl font-medium tracking-tight sm:text-2xl'>GhostCut 任务工作台</h1>
+						<h1 className='font-heading text-xl font-medium tracking-tight sm:text-2xl'>Lingee Cut 任务工作台</h1>
 						<p className='max-w-2xl text-xs leading-5 text-muted-foreground sm:text-sm'>
 							上传、批量提交、统一轮询和结果分组展示已串成完整链路。
 						</p>
@@ -176,12 +183,13 @@ export function TaskDashboardPage() {
 							onSourceLanguageChange={setSourceLanguage}
 							onTargetLanguageChange={setTargetLanguage}
 							pendingFiles={pendingFiles}
-						onFilesChange={(newFiles) => {
-							probeNewFiles(newFiles)
-							setSelectedFiles((prev) => [...prev, ...newFiles])
-						}}
-						onRemoveFile={(index) => setSelectedFiles((prev) => prev.filter((_, i) => i !== index))}
-						onCreateTask={handleCreateTask}
+							onFilesChange={(newFiles) => {
+								probeNewFiles(newFiles)
+								setSelectedFiles((prev) => [...prev, ...newFiles])
+							}}
+							onRemoveFile={(index) => setSelectedFiles((prev) => prev.filter((_, i) => i !== index))}
+							onCreateTask={handleCreateTask}
+							isCreating={isCreatingTask}
 							onShowResults={handleShowResults}
 						/>
 					</div>

@@ -26,7 +26,7 @@ const statusConfig = {
 	uploading: {
 		label: '上传中',
 		variant: 'outline' as const,
-		icon: UploadIcon,
+		icon: LoaderCircleIcon,
 	},
 	uploaded: {
 		label: '已上传',

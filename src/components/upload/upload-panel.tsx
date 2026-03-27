@@ -21,6 +21,7 @@ type UploadPanelProps = {
 	onRemoveFile?: (index: number) => void
 	onCreateTask?: () => void
 	onShowResults?: () => void
+	isCreating?: boolean
 }
 
 export function UploadPanel({
@@ -35,6 +36,7 @@ export function UploadPanel({
 	onRemoveFile,
 	onCreateTask,
 	onShowResults,
+	isCreating,
 }: UploadPanelProps) {
 	function handleFileChange(event: ChangeEvent<HTMLInputElement>) {
 		onFilesChange?.(Array.from(event.target.files ?? []))
@@ -122,6 +124,7 @@ export function UploadPanel({
 				<TargetLanguageSelector items={targetLanguageOptions} value={targetLanguage} onValueChange={onTargetLanguageChange} />
 				<CreateTaskButton
 					disabled={pendingFiles.length === 0}
+					isCreating={isCreating}
 					onCreateTask={onCreateTask}
 					onShowResults={onShowResults}
 				/>
